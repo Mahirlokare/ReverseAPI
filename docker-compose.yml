@@ -1,6 +1,9 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_PLAYWRIGHT: "1"
     ports: ["8000:8000"]
     environment:
       DATABASE_URL: postgresql+psycopg://apiscope:apiscope@postgres:5432/apiscope
