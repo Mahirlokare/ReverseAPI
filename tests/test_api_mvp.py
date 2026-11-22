@@ -1,35 +1,32 @@
-from apiscope.main import analyze, export_openapi, generate_tests, compare
 import json
+from apiscope.core.mvp_analysis import parse_har, summarize, export_openapi, compare_scans, make_tests
 
 def fixture():
     return {"log":{"entries":[
       {"request":{"method":"GET","url":"https://api.demo/users/7?api_key=secret","headers":[{"name":"Authorization","value":"Bearer private"}]},
-       "response":{"status":200,"content":{"mimeType":"application/json","text":"{\"id\":7,\"name\":\"Demo\",\"password\":\"hidden\"}"}}},
-      {"request":{"method":"GET","url":"https://api.demo/users/8"},"response":{"status":200,"content":{"mimeType":"application/json","text":"{\"id\":8,\"name\":\"Sample\"}"}}}
+       "response":{"status":200,"content":{"mimeType":"application/json","text":"{\\"id\\":7,\\"name\\":\\"Demo\\",\\"password\\":\\"hidden\\"}"}}},
+      {"request":{"method":"GET","url":"https://api.demo/users/8"},"response":{"status":200,"content":{"mimeType":"application/json","text":"{\\"id\\":8,\\"name\\":\\"Sample\\"}"}}}
     ]}}
 
-def test_har_analysis_groups_and_redacts():
-    scan=analyze(json.dumps(fixture()).encode(),"capture.har")
-    assert scan["endpoint_count"]==1
-    ep=scan["endpoints"][0]
-    assert ep["path"]=="/users/{id}"
-    assert ep["observations"]==2
-    assert "secret" not in ep["sample_urls"][0]
-    assert "password" not in ep["response_schema"].get("properties",{})
+def scan_fixture():
+    return summarize(parse_har(fixture()))
 
-def test_openapi_export_structure():
-    scan=analyze(json.dumps(fixture()).encode(),"capture.har")
-    spec=export_openapi(scan)
+def test_parser_groups_routes_and_redacts():
+    scan=scan_fixture()
+    assert scan["endpoint_count"]==1
+    endpoint=scan["endpoints"][0]
+    assert endpoint["path"]=="/users/{id}" and endpoint["observations"]==2
+    assert "secret" not in endpoint["sample_urls"][0]
+    assert "password" not in endpoint["response_schema"].get("properties",{})
+
+def test_openapi_export():
+    spec=export_openapi(scan_fixture())
     assert spec["openapi"]=="3.1.0" and "/users/{id}" in spec["paths"]
 
-def test_offline_tests_are_returned():
-    scan=analyze(json.dumps(fixture()).encode(),"capture.har")
-    generated=generate_tests(scan)
-    assert generated["filename"].endswith(".py")
-    assert "def test_route_0_present" in generated["content"]
+def test_generated_pytest_snapshot():
+    code=make_tests(scan_fixture())
+    assert "def test_route_0_exists" in code and "SCAN" in code
 
-def test_drift_compare_finds_additions():
-    scan=analyze(json.dumps(fixture()).encode(),"capture.har")
-    empty={"endpoints":[]}
-    result=compare({"before":empty,"after":scan})
-    assert result["summary"]["added"]==1
+def test_diff_detects_added_routes():
+    diff=compare_scans({"endpoints":[]},scan_fixture())
+    assert diff["summary"]["added"]==1
