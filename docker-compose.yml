@@ -1,10 +1,7 @@
 services:
   api:
     build: .
-    ports: ["8000:8000"]
-  ui:
-    build: ./ui
-    ports: ["5173:5173"]
-    environment:
-      VITE_API_BASE: http://localhost:8000
-    depends_on: [api]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apiscope:/app/apiscope
