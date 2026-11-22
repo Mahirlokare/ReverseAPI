@@ -1,5 +1,1 @@
-__pycache__/
-.pytest_cache/
-.venv/
-.env
-*.pyc
+__pycache__/\n.pytest_cache/\n.venv/\n.env\n*.pyc\nui/node_modules/\nui/dist/\n

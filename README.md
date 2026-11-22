@@ -1,28 +1,39 @@
-# APIScope — Week 1 Foundation
+# APIScope
+Hybrid API discovery and reverse-engineering for authorized HAR captures.
 
-API discovery and reverse-engineering platform. Week 1 implements a HAR parser, noise filtering, path templating, endpoint aggregation, a FastAPI upload endpoint, and unit tests.
+## Features
+- HAR upload and parsing; static/noise filtering
+- Route templating and grouping by host/method/path
+- Query/header inventory and status observations
+- Basic response JSON schema inference (sensitive field names omitted)
+- Auth marker observations with values redacted
+- Passive security observations only (no target requests/exploitation)
+- OpenAPI 3.1 export, offline pytest generator, scan comparison API
+- React dashboard with endpoint inventory, search, method filtering, details and exports
 
-## Quick start
-```bash
-python -m venv .venv
-source .venv/bin/activate
+## Run locally
+Python 3.11+, Node 20+:
+\`\`\`bash
+python -m venv .venv && source .venv/bin/activate
 pip install -e '.[dev]'
 uvicorn apiscope.main:app --reload
-```
-Open http://127.0.0.1:8000/docs for interactive API documentation.
+# second terminal
+cd ui && npm install && npm run dev
+\`\`\`
+UI at http://localhost:5173, API docs at http://localhost:8000/docs.
 
 ## Docker
-```bash
-docker compose up --build
-```
+\`docker compose up --build\`
 
-## API
-- `GET /health` — service status
-- `POST /api/v1/analyze/har` — upload HAR JSON; returns endpoint inventory grouped by host, method, and normalized path
+## API endpoints
+- GET /health
+- POST /api/v1/analyze/har (multipart field \`file\`)
+- POST /api/v1/export/openapi (scan JSON)
+- POST /api/v1/generate/tests (scan JSON)
+- POST /api/v1/compare (JSON body: before, after)
 
 ## Tests
-```bash
-pytest -q
-```
+\`python -m pytest -q\`
 
-Only analyze traffic/assets for which you have authorization. The Week 1 parser reads HAR data; it does not execute requests against targets.
+## Limitations
+MVP has no persistence, user accounts, crawler, APK analysis, scheduled scans or active security testing. Inferred schemas are based only on captured response samples. Treat HARs as sensitive and only analyze captures you are authorized to inspect.
