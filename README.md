@@ -4,6 +4,7 @@
 
 ## Implemented in this repository today
 - HAR/JSON import with validation and a 25 MB upload limit
+- Static JavaScript/text bundle route candidate extraction (non-executing, 10 MB limit)
 - Static/noise filtering and route normalization (numeric IDs, UUIDs, long hex IDs)
 - Endpoint grouping by host, HTTP method and normalized route
 - Query parameter and request header inventory
@@ -55,6 +56,7 @@ docker compose up --build
 - `GET /` service metadata
 - `GET /health` health status
 - `POST /api/v1/analyze/har` multipart `file` upload
+- `POST /api/v1/analyze/javascript` multipart `file` upload (candidate routes only)
 - `POST /api/v1/export/openapi` scan JSON body
 - `POST /api/v1/generate/tests` scan JSON body
 - `POST /api/v1/compare` JSON body with `before` and `after` scan objects
