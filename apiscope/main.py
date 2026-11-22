@@ -5,7 +5,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from apiscope.core.mvp_analysis import parse_har, summarize, export_openapi, compare_scans, make_tests
 from apiscope.core.static_analysis import extract_routes
-from apiscope.core.security_lint import lint_scan
+from apiscope.core.security_lint import lint_scan\nfrom urllib.parse import urlparse\nfrom apiscope.core.mvp_analysis import normalize, safe_url
 from apiscope.storage import initialize, save_scan, list_scans, get_scan
 app = FastAPI(title="APIScope",description="Hybrid API discovery for authorized inputs; passive analysis only.",version="0.4.0")
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_headers=["*"])
@@ -51,7 +51,24 @@ async def crawl_site(body:dict):
     url=body.get("url");hosts=body.get("authorized_hosts",[])
     if not url or not isinstance(hosts,list) or not hosts: raise HTTPException(400,"Provide URL and authorized_hosts allowlist")
     from apiscope.core.crawler import crawl
-    try: return await crawl(url,hosts,depth=body.get("depth",1),max_pages=body.get("max_pages",20))
+    try:
+        captured=await crawl(url,hosts,depth=body.get("depth",1),max_pages=body.get("max_pages",20))
+        grouped={}
+        for request in captured["requests"]:
+            parsed=urlparse(request["url"]); route=normalize(parsed.path); key=(parsed.netloc.lower(),request["method"],route)
+            endpoint=grouped.setdefault(key,{"host":parsed.netloc.lower(),"method":request["method"],"path":route,"observations":0,"status_codes":[],"sample_urls":[],"query_params":[],"request_headers":[],"auth_signals":[],"response_schema":{},"response_content_types":[],"confidence":0.35})
+            endpoint["observations"]+=request["observations"]
+            if isinstance(request.get("status"),int) and request["status"] not in endpoint["status_codes"]:endpoint["status_codes"].append(request["status"])
+            sample=safe_url(request["url"])
+            if sample not in endpoint["sample_urls"] and len(endpoint["sample_urls"])<3:endpoint["sample_urls"].append(sample)
+            endpoint["query_params"]=sorted(set(endpoint["query_params"])|{k for k,v in __import__("urllib.parse",fromlist=["parse_qsl"]).parse_qsl(parsed.query)})
+            endpoint["auth_signals"]=sorted(set(endpoint["auth_signals"])|set(request.get("auth_markers",[])))
+        endpoints=sorted(grouped.values(),key=lambda e:(e["host"],e["path"],e["method"]))
+        scan={"endpoint_count":len(endpoints),"total_observations":sum(e["observations"] for e in endpoints),"methods":{},"hosts":captured["scope_hosts"],"endpoints":endpoints,"findings":[]}
+        for endpoint in endpoints:scan["methods"][endpoint["method"]]=scan["methods"].get(endpoint["method"],0)+1
+        scan["findings"]=lint_scan(scan);scan["security_findings"]=scan["findings"];scan["scan_id"]=save_scan(scan,"crawl")
+        captured["scan"]=scan
+        return captured
     except (ValueError,RuntimeError) as exc: raise HTTPException(400,str(exc)) from exc
 @app.get("/api/v1/scans")
 def scans(): return {"items":list_scans()}
