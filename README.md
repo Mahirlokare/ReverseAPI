@@ -1,34 +1,43 @@
-# APIScope
+# APIScope — Hybrid API Discovery & Reverse-Engineering Platform
 
-**APIScope** is a hybrid API discovery and reverse-engineering workbench for authorized traffic captures. It is being developed toward the project blueprint: capture and static discovery, normalized endpoint inventory, schema inference, security observations, API exports, test generation and version drift.
+APIScope is a developer/security research workbench for discovering and documenting APIs from **authorized** inputs. Its pipeline combines passive captured traffic and static source/bundle analysis, normalizes routes, infers response schemas, produces exports/tests, and provides a dashboard.
 
-## Implemented in this repository today
-- HAR/JSON import with validation and a 25 MB upload limit
-- Static JavaScript/text bundle route candidate extraction (non-executing, 10 MB limit)
-- Static/noise filtering and route normalization (numeric IDs, UUIDs, long hex IDs)
-- Endpoint grouping by host, HTTP method and normalized route
-- Query parameter and request header inventory
-- Authentication signals detected from headers (values are not stored)
-- Query-string secret redaction in sample URLs
-- Response JSON schema inference and merging across observations (common fields required, observed-only optional fields)
-- Per-endpoint observational confidence indicator (heuristic, not a measured accuracy score)
-- Passive observations for missing auth signals and observed 5xx responses
-- OpenAPI 3.1 export
-- Offline pytest inventory generator
-- Compare two inventories to report added, removed and changed routes/fields
-- React + TypeScript dashboard with HAR upload, endpoint search/filter, endpoint details and export controls
+> Use only systems, apps, APKs and traffic you own or are explicitly authorized to assess. The crawler is allowlist-bounded. APIScope does not perform exploitation or vulnerability probing.
 
-## Planned roadmap (not yet implemented)
-- Playwright website crawler with explicit authorization/consent and bounded crawl settings
-- APK static analysis via jadx/apktool
-- JavaScript bundle route extraction
-- Persistent scan history (PostgreSQL)
-- Background processing (Redis + Celery/RQ)
-- Postman export, typed client generator, richer security rules
-- Confidence calibration and benchmark harness with measured precision/recall
-- CLI and richer dashboard pages
+## Current implementation
+- **HAR analysis:** upload validation (25 MB), static/noise exclusion, endpoint grouping, route templating for numeric/UUID/long-hex IDs, query/header inventory, response status and content type inventory.
+- **Privacy handling:** query values for sensitive keys are redacted in sample URLs; auth header values are not retained; response schema inference skips sensitive-looking property names.
+- **Schema inference:** infer primitive/object/array types and merge samples; fields absent from some samples become optional. Confidence is an evidence heuristic and is not benchmark accuracy.
+- **JavaScript static route candidates:** upload JS/text (10 MB limit); route string extraction runs without executing uploaded code. Candidates are unverified.
+- **APK static candidate extraction:** JADX adapter; no APK execution. Requires JADX installed on the backend host.
+- **Allowlisted Playwright crawler:** explicitly provided hosts only, depth capped at 3, page count capped at 50 (UI defaults depth 1 and 10 pages). Requires Playwright and Chromium; local Compose installs them.
+- **Passive security lint:** no auth signal, observed 5xx, sensitive-looking response-field names. Findings are observations and not proof of a vulnerability.
+- **Exports:** OpenAPI 3.1 and offline pytest route inventory tests.
+- **Drift comparison:** compares before/after scans to find new, removed, or changed routes and observation fields.
+- **CLI:** analyze HAR files and export OpenAPI.
+- **Optional persistence:** PostgreSQL scan history enabled when DATABASE_URL is set.
+- **Worker configuration:** Celery + Redis config and HAR analysis task scaffold.
+- **Dashboard:** HAR import, JS candidate import, crawler UI, route inventory, endpoint details, OpenAPI export and test generation.
+- **Docker Compose:** API, frontend, PostgreSQL, Redis, worker and Playwright/Chromium crawler environment.
 
-Do not treat roadmap items or example metrics in the project blueprint as implemented. No active probing or exploitation is performed.
+## Project structure
+```
+apiscope/
+  main.py                 FastAPI endpoints
+  cli.py                 CLI
+  db.py / models.py       SQLAlchemy persistence
+  storage.py              scan-history operations
+  worker.py               Celery task configuration
+  core/
+    mvp_analysis.py       HAR parsing, schema inference, exports, drift
+    static_analysis.py    JavaScript static route candidates
+    apk_static.py         JADX APK adapter
+    crawler.py           allowlisted bounded Playwright capture
+    inference.py          inference wrappers and confidence heuristic
+    security_lint.py      passive security observations
+ui/                      React + TypeScript dashboard
+tests/                    automated tests
+```
 
 ## Quickstart (Python 3.11+)
 ```bash
@@ -37,36 +46,63 @@ source .venv/bin/activate
 pip install -e '.[dev]'
 uvicorn apiscope.main:app --reload
 ```
-API docs: http://localhost:8000/docs · health: http://localhost:8000/health
+API docs at http://localhost:8000/docs. Health at http://localhost:8000/health.
 
-## Frontend (Node 20+)
-```bash
-cd ui
-npm install
-npm run dev
-```
-Dashboard: http://localhost:5173. Configure the API origin with `VITE_API_BASE` when running separately.
-
-## Docker
+## Full local stack (Docker)
+Install Docker Engine/Desktop and Compose. From the repo root:
 ```bash
 docker compose up --build
 ```
+- Dashboard: http://localhost:5173
+- API and OpenAPI docs: http://localhost:8000/docs
+- PostgreSQL: compose-internal service (credentials in compose file are for local development only)
+- Redis: compose-internal
+- Crawler: enabled in Compose image via Playwright Chromium
 
-## API
-- `GET /` service metadata
-- `GET /health` health status
-- `POST /api/v1/analyze/har` multipart `file` upload
-- `POST /api/v1/analyze/javascript` multipart `file` upload (candidate routes only)
-- `POST /api/v1/export/openapi` scan JSON body
-- `POST /api/v1/generate/tests` scan JSON body
-- `POST /api/v1/compare` JSON body with `before` and `after` scan objects
+Stop services: `docker compose down`. Delete local database/cache volumes: `docker compose down -v` (destructive to local history).
 
-## Tests
+## CLI
 ```bash
-python -m pytest -q
+apiscope har sample.har --output scan.json
+apiscope openapi scan.json --output openapi.json
+```
+
+## API routes
+| Method | Path | Purpose |
+|---|---|---|
+| GET | / | metadata and feature list |
+| GET | /health | health check |
+| POST | /api/v1/analyze/har | analyze HAR upload |
+| POST | /api/v1/analyze/javascript | static JS route candidates |
+| POST | /api/v1/analyze/apk | APK candidate strings via JADX |
+| POST | /api/v1/crawl | bounded allowlisted Playwright crawl |
+| GET | /api/v1/scans | list persisted scan summaries (DATABASE_URL required) |
+| GET | /api/v1/scans/{scan_id} | fetch saved scan (DATABASE_URL required) |
+| POST | /api/v1/security/lint | passive observations |
+| POST | /api/v1/export/openapi | OpenAPI 3.1 export |
+| POST | /api/v1/generate/tests | offline pytest route tests |
+| POST | /api/v1/compare | compare before/after scan objects |
+
+## Testing
+```bash
+pip install -e '.[dev]'
+pytest -q
 python -m compileall -q apiscope tests
 ```
-GitHub Actions runs backend tests and frontend build on push/PR.
+GitHub Actions runs backend tests and frontend build.
 
-## Privacy and responsible use
-Analyze only applications and traffic you have permission to inspect. APIScope is passive: it does not exploit endpoints. Credential-like query parameters are redacted from sample URLs; sensitive response fields are excluded from inferred schemas. Verify exported schemas before relying on them.
+## Known gaps / roadmap
+- Crawl traffic is currently returned as capture records; it is not yet transformed into the same full HAR response schema inventory.
+- APK adapter currently extracts conservative route string candidates only; manifest, permissions, endpoint host reconstruction and richer code references are future work.
+- JS route extraction is regex-based and intentionally conservative; false positives and misses are expected.
+- The worker scaffold is present, but API routes do not yet enqueue scans asynchronously.
+- Scan persistence uses SQLAlchemy create-all for prototype schema; Alembic migration workflow is still to be added.
+- Authentication/accounts, multi-user tenancy, scheduled drift scans, Postman export, typed SDK generation, calibrated confidence and benchmark measurements are not yet shipped.
+- Example performance figures in the project blueprint are targets/examples only; no benchmark results are claimed.
+
+## Ethical safeguards
+- Explicit allowlist is mandatory for crawler hosts.
+- Crawler has depth/page caps; respect terms, robots policies and rate limits. Do not run against third-party systems without permission.
+- APKs are decompiled statically; they are not executed.
+- No active exploit checks, credential stuffing, fuzzing or brute force.
+- Treat all results as candidates and manually validate before use.
