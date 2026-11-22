@@ -4,7 +4,7 @@ from fastapi import FastAPI,UploadFile,File,HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from apiscope.core.mvp_analysis import parse_har,summarize
 app=FastAPI(title="APIScope",description="Passive API discovery from authorized HAR captures",version="0.2.0")
-app.add_middleware(CORSMiddleware,allow_origins=["http://localhost:5173","http://127.0.0.1:5173"],allow_methods=["*"],allow_headers=["*"])
+app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_headers=["*"])
 @app.get("/health")
 def health():return {"status":"ok","service":"apiscope","version":"0.2.0"}
 @app.post("/api/v1/analyze/har")
