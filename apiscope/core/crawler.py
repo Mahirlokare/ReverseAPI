@@ -3,7 +3,7 @@ from urllib.parse import urljoin,urlparse
 from collections import deque
 async def crawl(url,authorized_hosts,depth=1,max_pages=20,timeout_ms=12000):
     try: from playwright.async_api import async_playwright
-    except ImportError as exc: raise RuntimeError("Install APIScope capture extra: pip install -e '.[capture'") from exc
+    except ImportError as exc: raise RuntimeError("Install APIScope capture extra: pip install -e '.[capture]'") from exc
     allowed={h.lower() for h in authorized_hosts}; start=urlparse(url)
     if start.hostname not in allowed: raise ValueError("Start host must be in the explicit authorized-host allowlist")
     depth=max(0,min(int(depth),3)); max_pages=max(1,min(int(max_pages),50))
