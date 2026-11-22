@@ -1,0 +1,2100 @@
+# Reverse API Engineer
+
+## Ultra-Detailed Product Requirements Document (PRD)
+
+**Version:** 1.0  
+**Product Category:** AI-powered API Discovery, Reverse Engineering, Browser Automation, API Client Generation and Developer Productivity  
+**Product Type:** Full-stack web application with a privately executed backend CLI engine  
+**Reference Project:** [kalil0321/reverse-api-engineer](https://github.com/kalil0321/reverse-api-engineer)  
+**Primary Interface:** Web application  
+**Backend Execution:** Hidden server-side terminal / CLI subprocess  
+**Target Users:** Developers, software engineers, API engineers, automation engineers, QA engineers, technical researchers and authorized security testers  
+**Initial Deployment:** Local development / self-hosted single-user deployment  
+**Future Deployment:** Multi-user hosted SaaS  
+**Frontend:** Next.js, React, TypeScript  
+**Backend API:** Python, FastAPI  
+**Execution Engine:** Original Reverse API Engineer CLI  
+**Browser Automation:** Playwright and supported browser providers  
+**Communication:** REST API and WebSockets  
+**Database:** PostgreSQL for production; SQLite may be used for local MVP  
+**Styling:** Tailwind CSS  
+**UI Components:** shadcn/ui and carefully selected reusable components  
+**Icons:** Lucide Icons  
+**Charts:** Recharts  
+**Package Management:** npm/pnpm and uv  
+**Version Control:** Git and GitHub  
+
+---
+
+# 1. Product Overview
+
+Reverse API Engineer is a professional web-based application that enables users to discover, inspect, understand, reverse-engineer and generate usable API clients from the actual network communication performed by websites.
+
+The application uses the existing Reverse API Engineer CLI as its underlying engineering engine.
+
+Instead of requiring users to install packages, open terminals, enter CLI commands, configure execution environments or manually inspect browser developer tools, the product provides a centralized graphical interface.
+
+Users interact exclusively with the frontend.
+
+The backend receives user requests, validates them, executes supported CLI operations in a controlled server-side environment, processes execution results and returns structured information to the frontend.
+
+**The terminal and backend execution environment must never be exposed to ordinary users.**
+
+The frontend must not display a terminal emulator, shell prompt, raw command input, backend filesystem, environment variables or unrestricted server execution controls.
+
+Users should experience the application as a standalone API engineering platform rather than a graphical wrapper around a terminal.
+
+## 1.1 Core Product Concept
+
+The product transforms this:
+
+- Opening a terminal.
+- Installing Python and CLI dependencies.
+- Configuring an AI provider.
+- Running reverse-engineering commands.
+- Opening browser sessions.
+- Capturing network traffic.
+- Inspecting HAR files.
+- Generating API client code.
+- Finding generated files.
+- Running and debugging generated clients.
+
+Into a guided web workflow:
+
+1. Create a project.
+2. Enter an authorized target website URL.
+3. Describe the information or functionality to investigate.
+4. Select an execution mode.
+5. Start an API discovery session.
+6. Monitor progress through the dashboard.
+7. Inspect discovered requests and endpoints.
+8. Review the generated API client.
+9. Test the generated client.
+10. Download or export the completed project.
+
+## 1.2 Product Objectives
+
+1. Provide a professional frontend for the original Reverse API Engineer engine.
+2. Hide all backend terminal and CLI operations from end users.
+3. Support controlled execution of CLI commands through a backend service.
+4. Provide agent-based and manual API discovery workflows where technically supported.
+5. Capture and analyze actual website network requests.
+6. Identify API endpoints, methods, headers, parameters and request payloads.
+7. Generate typed API clients in supported programming languages.
+8. Support API client regeneration from previously captured traffic.
+9. Allow users to review, organize and manage multiple projects and runs.
+10. Provide structured execution logs and error reporting without exposing server internals.
+11. Support configurable AI providers and models through protected backend configuration.
+12. Provide secure browser sessions and authentication handling.
+13. Allow generated code and artifacts to be inspected, tested and downloaded.
+14. Maintain a professional developer-focused user experience.
+15. Build an architecture that can eventually support multiple users and isolated execution environments.
+
+## 1.3 Product Scope
+
+### Included in the initial product
+
+- User authentication and workspace.
+- Project creation and management.
+- Website URL and task input.
+- Agent execution mode.
+- Supported manual capture workflow.
+- CLI integration.
+- Background job execution.
+- Live execution status.
+- Endpoint and request inspection.
+- HAR artifact management where available.
+- AI-powered API client generation.
+- Multiple output programming languages.
+- Generated code viewer.
+- Run history.
+- Re-engineering previous captures.
+- Generated client execution through controlled runners.
+- Project export and downloads.
+- AI provider/model configuration.
+- Usage and execution monitoring.
+- Settings, security and documentation.
+
+### Explicitly outside initial scope
+
+- Unrestricted shell access.
+- Public proxy or anonymous scraping infrastructure.
+- Bypassing authentication, CAPTCHAs, paywalls or anti-bot protections.
+- Unauthorized access to private APIs or user accounts.
+- Automatic credential theft or extraction.
+- Arbitrary remote code execution through the web interface.
+- Full Postman replacement.
+- Full API gateway functionality.
+- Automatic production deployment of generated clients.
+- Guaranteed compatibility with every website.
+- Guaranteed successful discovery on sites with strong bot detection.
+
+---
+
+# 2. Reference Project Analysis and Functional Baseline
+
+The reference repository is:
+
+https://github.com/kalil0321/reverse-api-engineer
+
+The application must use the original project's actual capabilities as its functional foundation rather than inventing a replacement engine.
+
+## 2.1 Existing Engine Capabilities
+
+The reference engine supports:
+
+1. Browser-driven website exploration.
+2. AI-agent-driven browsing.
+3. Network traffic capture.
+4. HAR-based API inspection.
+5. API client generation.
+6. Multiple AI coding backends.
+7. Multiple programming language outputs.
+8. Saved execution history.
+9. Previous run inspection.
+10. Re-engineering saved captures.
+11. Generated client execution.
+12. JSON-based non-interactive CLI execution.
+13. Structured run information and status reporting.
+
+## 2.2 Existing Execution Modes
+
+### Agent Mode
+
+The AI agent visits a target website, performs the requested task, interacts with the website and captures relevant network activity.
+
+The generated client is based on observed network communication.
+
+### Manual Mode
+
+The user manually interacts with a browser while the engine captures network traffic.
+
+The application must provide a suitable browser-session experience before claiming full browser control through the web interface.
+
+### Engineer Mode
+
+The engine reuses a previously saved capture and generates or regenerates an API client without repeating the original browsing process.
+
+### Supported Browser Providers
+
+The reference engine includes browser integration options such as:
+
+- Chrome MCP.
+- Playwright MCP / automatic browser mode.
+- Vercel agent-browser.
+
+Provider compatibility must be checked against the installed CLI version.
+
+### Important Integration Constraint
+
+The original engine's manual browser mode and Chrome MCP mode have environment-specific requirements.
+
+A browser running on the backend server is not automatically the same as a user's local Chrome browser.
+
+Therefore:
+
+- MVP should prioritize supported headless Playwright-based agent execution.
+- Manual capture should use an explicitly supported remote-browser or local-browser bridge architecture.
+- Chrome MCP must not be advertised as available in hosted mode unless its connection and session requirements are genuinely satisfied.
+- HAR upload/import can serve as an alternative capture workflow.
+- Provider availability must be determined from actual backend configuration and health checks.
+
+## 2.3 CLI Integration Contract
+
+The backend should communicate with the installed CLI through its documented non-interactive interface wherever possible.
+
+Relevant command categories include:
+
+- Agent execution with JSON output.
+- Listing previous runs.
+- Showing run details.
+- Engineering an existing run.
+- Running generated clients.
+- Reading structured status and results.
+
+The CLI should be invoked as a controlled subprocess, not as an unrestricted shell interface.
+
+The backend must use argument arrays, validated inputs, explicit working directories, process timeouts and controlled environment variables.
+
+The integration must be compatible with the installed and pinned CLI release.
+
+The backend must not assume that an interactive terminal screen can be safely parsed as a structured API response.
+
+---
+
+# 3. System Architecture
+
+## 3.1 High-Level Architecture
+
+The system consists of five primary layers.
+
+### Layer 1 — Frontend
+
+Next.js application responsible for all user-facing interactions.
+
+Responsibilities:
+
+- Dashboard.
+- Projects and workspaces.
+- New discovery workflow.
+- Execution monitoring.
+- Endpoint inspection.
+- Code viewer.
+- Generated client management.
+- AI provider settings.
+- User preferences.
+- Notifications and error states.
+
+### Layer 2 — Backend API
+
+FastAPI application responsible for authentication, authorization, request validation, orchestration and communication between frontend and execution workers.
+
+Responsibilities:
+
+- REST API endpoints.
+- WebSocket connections.
+- Job creation.
+- Job status management.
+- CLI process orchestration.
+- Project and run metadata.
+- Artifact access.
+- AI provider configuration.
+- Usage tracking.
+- Audit events.
+
+### Layer 3 — Background Execution Worker
+
+A separate backend worker executes long-running CLI processes.
+
+Responsibilities:
+
+- Accept validated jobs.
+- Prepare isolated working directories.
+- Invoke the CLI.
+- Collect stdout and stderr.
+- Parse structured JSON responses.
+- Track progress.
+- Manage timeouts.
+- Handle cancellation.
+- Persist artifacts and run metadata.
+- Notify the frontend.
+
+The worker must not execute arbitrary commands supplied by a user.
+
+### Layer 4 — Reverse API Engineer Engine
+
+The original CLI is the underlying engineering engine.
+
+It is responsible for its supported browser, agent, capture, analysis, client-generation and client-execution capabilities.
+
+The web application should integrate with it rather than unnecessarily reimplementing its core functionality.
+
+### Layer 5 — Database and Artifact Storage
+
+Persistent storage for users, projects, execution history, settings, metadata and generated artifacts.
+
+Use PostgreSQL for production and a private filesystem or object storage for artifacts.
+
+## 3.2 Architecture Flow
+
+```text
+                 USER
+                   |
+                   v
+          NEXT.JS FRONTEND
+                   |
+                   | REST API / WebSocket
+                   v
+             FASTAPI BACKEND
+                   |
+          Authentication & Validation
+                   |
+                   v
+             JOB QUEUE
+                   |
+                   v
+          BACKGROUND WORKER
+                   |
+                   v
+       PRIVATE CLI SUBPROCESS
+                   |
+                   v
+       REVERSE API ENGINEER
+                   |
+          +--------+--------+
+          |                 |
+          v                 v
+      BROWSER           AI ENGINE
+      CAPTURE            ANALYSIS
+          |                 |
+          +--------+--------+
+                   |
+                   v
+            GENERATED CLIENT
+                   |
+                   v
+          ARTIFACT STORAGE
+                   |
+                   v
+          FASTAPI BACKEND
+                   |
+             REST / WS
+                   |
+                   v
+           NEXT.JS FRONTEND
+                   |
+                   v
+                  USER
+```
+
+## 3.3 Critical Architecture Rules
+
+1. Frontend must never invoke the CLI directly.
+2. Frontend must never access the backend filesystem.
+3. Frontend must never receive unrestricted server command execution capability.
+4. CLI execution must happen only on the backend worker.
+5. Long-running processes must not block ordinary HTTP requests.
+6. Every execution must have a unique run ID.
+7. Every execution must be associated with an authorized project and user.
+8. WebSocket connections must authenticate and enforce project access.
+9. Generated files must be served through authorized download endpoints.
+10. Backend secrets must never be exposed to the browser.
+11. Execution must be isolated from other users' projects.
+12. All job inputs must be validated before execution.
+13. All process outputs must be parsed and sanitized before display.
+14. User cancellation must stop the corresponding process and child processes safely.
+15. Failed processes must leave a consistent, recoverable job state.
+
+## 3.4 Recommended Deployment Architecture
+
+### Initial Deployment — Local / Self-hosted
+
+- Next.js frontend.
+- FastAPI backend.
+- Local background worker.
+- Installed Reverse API Engineer CLI.
+- Local browser runtime.
+- SQLite or PostgreSQL.
+- Private artifact directory.
+
+The application can initially run on the developer's own machine while the CLI executes in the background.
+
+### Future Deployment — Hosted SaaS
+
+- Frontend hosting.
+- Backend API hosting.
+- Dedicated worker containers.
+- Job queue.
+- PostgreSQL.
+- Private object storage.
+- Isolated browser execution environments.
+- Per-user resource and usage limits.
+
+Hosted SaaS must not share unrestricted execution environments between users.
+
+---
+
+# 4. Technology Stack
+
+| Technology | Responsibility |
+|---|---|
+| Next.js | Frontend framework |
+| React | UI rendering |
+| TypeScript | Frontend type safety |
+| Tailwind CSS | Styling |
+| shadcn/ui | Reusable UI components |
+| Lucide Icons | Icon system |
+| Python 3.11+ | Backend runtime baseline; verify CLI requirements |
+| FastAPI | Backend API |
+| Pydantic | Validation and schemas |
+| Uvicorn | ASGI server |
+| Original Reverse API Engineer CLI | Core engineering engine |
+| Playwright | Supported browser automation |
+| PostgreSQL | Production database |
+| SQLite | Optional local MVP database |
+| SQLAlchemy | Database access |
+| Alembic | Database migrations |
+| Redis | Job coordination and optional caching |
+| Celery / RQ / equivalent | Background task processing |
+| WebSockets | Live job updates |
+| Recharts | Dashboard visualizations |
+| Monaco Editor | Generated code viewer |
+| Docker | Execution isolation and deployment |
+| Git | Version control |
+
+Technology versions must be pinned and tested. The reference CLI's own Python and Node.js requirements take precedence over arbitrary version assumptions.
+
+---
+
+# 5. Authentication and User Management
+
+## 5.1 Authentication
+
+The application must support:
+
+- Registration, if enabled by deployment owner.
+- Secure login.
+- Logout.
+- Password reset.
+- Password change.
+- Session management.
+- Account deactivation.
+- Optional email verification.
+- Secure remember-me functionality.
+
+For the initial local MVP, a single-owner account may be sufficient.
+
+## 5.2 Security Requirements
+
+- Secure password hashing.
+- Session or token-based authentication.
+- Secure cookie settings where cookies are used.
+- CSRF protection where applicable.
+- Login rate limiting.
+- Generic authentication error messages.
+- Session expiration.
+- Session revocation.
+- Server-side authorization.
+- No credential exposure in logs.
+
+## 5.3 Future Roles
+
+| Role | Access |
+|---|---|
+| Owner | Full workspace and configuration control |
+| Admin | Project and user administration |
+| Developer | Create and manage authorized projects and runs |
+| Viewer | Read-only project and artifact access |
+
+Role support can be expanded during multi-user SaaS development.
+
+---
+
+# 6. Main Navigation and Application Layout
+
+## 6.1 Primary Sidebar
+
+1. Overview
+2. Projects
+3. API Discovery
+4. Runs & History
+5. API Endpoints
+6. Generated Clients
+7. Captures & HAR
+8. AI Providers
+9. Usage & Activity
+10. Settings
+11. Documentation
+
+Menu items must be permission-controlled.
+
+## 6.2 Topbar
+
+- Workspace switcher.
+- Global search.
+- Quick-create project.
+- Notifications.
+- Execution activity indicator.
+- Theme switcher.
+- User profile menu.
+
+## 6.3 Global Application Behavior
+
+- Responsive sidebar.
+- Collapsible navigation.
+- Active-page indication.
+- Breadcrumbs.
+- Consistent page headers.
+- Global loading states.
+- Error notifications.
+- Confirmation dialogs for destructive actions.
+- Keyboard-accessible navigation.
+- Persisted appearance preferences.
+
+---
+
+# 7. Dashboard — Overview
+
+The dashboard should provide a concise overview of API engineering activity.
+
+## 7.1 KPI Cards
+
+- Total projects.
+- Total discovery runs.
+- Successful runs.
+- Failed runs.
+- Running jobs.
+- Discovered endpoints.
+- Generated API clients.
+- Total captures.
+- Recent activity.
+
+All KPI values must be derived from actual persisted application records.
+
+## 7.2 Dashboard Charts
+
+1. Discovery runs over time.
+2. Successful versus failed runs.
+3. Endpoints discovered over time.
+4. Programming language distribution.
+5. Runs by execution mode.
+6. Average execution duration.
+7. Project activity.
+
+## 7.3 Dashboard Tables
+
+- Recent projects.
+- Recent execution runs.
+- Recent generated clients.
+- Currently running jobs.
+- Recent failed jobs.
+- Recent system activity.
+
+## 7.4 Dashboard Interactions
+
+Clicking a KPI or chart element opens the corresponding filtered view.
+
+Users can filter by date range, project, status and execution mode.
+
+Do not show fabricated analytics or placeholder values as real execution history.
+
+---
+
+# 8. Project Management
+
+Projects provide the organizational structure for websites, tasks, captures, execution history and generated clients.
+
+## 8.1 Project Listing
+
+Display:
+
+- Project name.
+- Target website.
+- Description.
+- Number of runs.
+- Discovered endpoint count.
+- Generated client count.
+- Last activity.
+- Project status.
+
+Actions:
+
+- Create.
+- Open.
+- Edit.
+- Duplicate configuration.
+- Archive.
+- Delete, subject to safeguards.
+
+## 8.2 Project Creation
+
+Required:
+
+- Project name.
+- Target website URL.
+
+Optional:
+
+- Description.
+- Website category.
+- Default task description.
+- Preferred output language.
+- Default execution mode.
+- AI provider/model preference.
+
+## 8.3 Project Detail
+
+Tabs:
+
+1. Overview.
+2. Discovery Runs.
+3. Endpoints.
+4. Captures.
+5. Generated Clients.
+6. Files.
+7. Settings.
+8. Activity.
+
+All project resources must be scoped to their parent project.
+
+---
+
+# 9. API Discovery — Primary Workflow
+
+This is the most important functional section of the product.
+
+The interface must provide a guided workflow that allows a user to initiate a discovery session without using terminal commands.
+
+## 9.1 New Discovery Form
+
+### Required Fields
+
+- Target website URL.
+- Task or discovery objective.
+
+Example:
+
+Target URL:
+
+`https://example.com/jobs`
+
+Task:
+
+`Find the API used to search and retrieve job listings, including pagination and filters.`
+
+### Optional Fields
+
+- Project.
+- Execution mode.
+- Output programming language.
+- AI provider/model.
+- Browser provider.
+- Additional authorized navigation instructions.
+- Headless/headed option, where supported.
+- Execution timeout within administrator limits.
+
+## 9.2 URL Validation
+
+Validate:
+
+- URL syntax.
+- HTTP/HTTPS protocol.
+- Domain and host.
+- Blocked private/internal destinations.
+- Unsupported URL schemes.
+- Unsafe redirect destinations.
+
+All target browsing must follow the deployment's authorized-use policy.
+
+## 9.3 Task Input
+
+The user must be able to describe the desired functionality in natural language.
+
+Examples:
+
+- Discover the search API on a careers page.
+- Identify pagination requests.
+- Find product listing endpoints.
+- Understand how filters are submitted.
+- Identify the request used to retrieve profile information on an authorized test account.
+- Generate a TypeScript client for an observed public endpoint.
+
+The application should provide example prompts and clear input guidance.
+
+## 9.4 Execution Mode Selection
+
+### Agent Mode
+
+The AI agent controls the supported browser provider and performs the requested task.
+
+### Manual Mode
+
+The user interacts with a supported browser session while traffic is captured.
+
+This mode must only be enabled when the necessary browser connection is operational.
+
+### Engineer Mode
+
+The user selects a previous compatible capture and regenerates the API client.
+
+The UI must prevent selection of captures that cannot be used by the selected engine version or provider.
+
+## 9.5 Output Language Selection
+
+Support the languages exposed by the installed engine:
+
+- Python.
+- JavaScript.
+- TypeScript.
+- Go.
+- Java.
+- C#.
+- PHP.
+- Ruby.
+- C.
+- PowerShell.
+
+The available list must be synchronized with the engine's actual supported capabilities.
+
+## 9.6 Execution Confirmation
+
+Before starting, show:
+
+- Target URL.
+- Task description.
+- Execution mode.
+- Browser provider.
+- Selected AI configuration.
+- Output language.
+- Estimated resource constraints, if known.
+- Important authorization notice.
+
+The user confirms by selecting Start Discovery.
+
+## 9.7 Job Creation
+
+After confirmation:
+
+1. Backend validates the request.
+2. Backend checks project access.
+3. Backend checks provider availability.
+4. Backend creates a unique run record.
+5. Backend creates an isolated execution directory.
+6. Backend enqueues the job.
+7. Worker invokes the appropriate supported CLI operation.
+8. Frontend receives the run ID.
+9. Frontend opens the execution monitoring view.
+
+The frontend must not wait synchronously for the entire execution to finish.
+
+---
+
+# 10. Live Execution Monitoring
+
+## 10.1 Execution Status
+
+Supported application-level statuses:
+
+- Queued.
+- Initializing.
+- Browser Starting.
+- Navigating.
+- Interacting.
+- Capturing Traffic.
+- Analyzing Requests.
+- Generating Client.
+- Validating Output.
+- Completed.
+- Failed.
+- Cancelled.
+- Timed Out.
+
+These statuses should be mapped from actual CLI events and process state.
+
+Do not invent intermediate progress percentages when the engine does not provide measurable progress.
+
+## 10.2 Monitoring Interface
+
+Show:
+
+- Run ID.
+- Project name.
+- Target website.
+- Task description.
+- Execution mode.
+- Current status.
+- Start time.
+- Elapsed duration.
+- Selected model.
+- Selected output language.
+- Relevant progress events.
+- Safe error messages.
+
+## 10.3 Live Activity Feed
+
+Display readable events such as:
+
+- Execution initialized.
+- Browser provider initialized.
+- Website navigation started.
+- Requested task processing.
+- Network capture completed.
+- API analysis started.
+- Client generation started.
+- Output validation completed.
+
+These events must originate from actual execution events or be explicitly marked as application-level orchestration events.
+
+## 10.4 WebSocket Communication
+
+WebSocket updates may include:
+
+- Job status.
+- Progress events.
+- Sanitized logs.
+- Artifact availability.
+- Error notifications.
+- Completion details.
+
+The application must support reconnecting after refresh or temporary network disconnection.
+
+The backend remains the source of truth. On reconnection, the frontend must fetch the latest persisted job state.
+
+## 10.5 Execution Controls
+
+- Cancel execution.
+- Return to project.
+- View run details.
+- Retry failed execution where safe.
+- Open generated output.
+
+Cancellation must terminate the appropriate process tree and release resources.
+
+---
+
+# 11. API Endpoint Explorer
+
+Provide a dedicated area for inspecting discovered API endpoints.
+
+## 11.1 Endpoint Listing
+
+Columns:
+
+- Endpoint name.
+- HTTP method.
+- URL/path.
+- Host.
+- Status, if observed.
+- Associated run.
+- Discovery date.
+
+Filters:
+
+- HTTP method.
+- Project.
+- Host.
+- Discovery run.
+- Search query.
+
+## 11.2 Endpoint Detail
+
+Display:
+
+### General Information
+
+- Endpoint name.
+- Full URL.
+- HTTP method.
+- Source website.
+- Discovery run.
+- Timestamp.
+- Associated capture.
+
+### Request Information
+
+- Request headers.
+- Query parameters.
+- Path parameters, where identified.
+- Request body.
+- Content type.
+- Authentication-related metadata, with sensitive values masked.
+
+### Response Information
+
+- HTTP status, if observed.
+- Response headers.
+- Response body preview, subject to size limits.
+- Content type.
+- Timing, if available.
+
+### Analysis
+
+- Endpoint purpose.
+- Input fields.
+- Pagination behavior.
+- Filter behavior.
+- Dependencies.
+- Related endpoints.
+- Confidence or evidence level.
+
+Do not display inferred details as directly observed facts.
+
+## 11.3 Endpoint Grouping
+
+Group endpoints by:
+
+- Domain.
+- Host.
+- Resource.
+- HTTP method.
+- Discovery run.
+- Functional category.
+
+## 11.4 Search and Filtering
+
+Provide global endpoint search, method filters, domain filters, resource grouping and sorting.
+
+---
+
+# 12. Request and Response Inspector
+
+Provide a detailed request inspection experience similar to developer network tools.
+
+## 12.1 Request Viewer
+
+Tabs:
+
+1. Overview.
+2. Headers.
+3. Query Parameters.
+4. Payload.
+5. Authentication Metadata.
+6. Raw Request.
+
+## 12.2 Response Viewer
+
+Tabs:
+
+1. Overview.
+2. Headers.
+3. Body.
+4. Timing.
+5. Raw Response.
+
+## 12.3 Formatting
+
+Support:
+
+- Pretty-printed JSON.
+- Plain text.
+- HTML preview where safe.
+- XML preview where appropriate.
+- Syntax highlighting.
+- Copy values.
+- Search within content.
+- Expand/collapse JSON nodes.
+- Large-payload truncation.
+
+## 12.4 Sensitive Information
+
+Mask cookies, authorization headers, tokens and other configured sensitive fields.
+
+Provide explicit controls for viewing sensitive values only when the user is authorized.
+
+Never include secrets in application logs or analytics.
+
+---
+
+# 13. HAR Capture Management
+
+HAR artifacts are important inputs to the API engineering workflow.
+
+## 13.1 Capture Listing
+
+Display:
+
+- Capture ID.
+- Project.
+- Source run.
+- Target domain.
+- Capture date.
+- File size.
+- Request count.
+- Associated generated clients.
+- Compatibility status.
+
+## 13.2 Capture Detail
+
+Display:
+
+- Capture metadata.
+- Request count.
+- Host distribution.
+- Methods distribution.
+- Related endpoints.
+- Source run.
+- Available engineering actions.
+
+## 13.3 HAR Import
+
+Where supported, allow authorized users to import HAR files.
+
+Requirements:
+
+- Validate file format.
+- Apply upload size limits.
+- Validate entry count.
+- Reject malformed files.
+- Inspect sensitive data.
+- Warn users about cookies, tokens and personal information.
+- Store files privately.
+- Associate imports with a project.
+- Track provenance.
+
+## 13.4 HAR Export
+
+Allow authorized users to download the original or sanitized capture where available.
+
+Sanitized exports must clearly indicate that sensitive fields have been redacted.
+
+---
+
+# 14. Generated API Clients
+
+This is one of the primary deliverables of the application.
+
+## 14.1 Generated Client Listing
+
+Display:
+
+- Client name.
+- Project.
+- Programming language.
+- Source run.
+- Generated date.
+- File count.
+- Validation status.
+- Version.
+
+## 14.2 Generated Client Detail
+
+Tabs:
+
+1. Overview.
+2. Source Code.
+3. Files.
+4. README.
+5. Example Usage.
+6. Execution Results.
+7. History.
+
+## 14.3 Code Viewer
+
+Integrate Monaco Editor or an equivalent editor.
+
+Features:
+
+- Syntax highlighting.
+- File tree.
+- Read-only default mode.
+- Search.
+- Copy.
+- Download file.
+- Download complete project.
+- File-size limits.
+- Safe handling of generated content.
+
+Editing may be introduced later with version tracking and controlled saves.
+
+## 14.4 Generated Project Files
+
+The actual generated files must be discovered from the CLI output.
+
+A typical generated project may contain:
+
+```text
+generated-api-client/
+├── api_client.py
+├── README.md
+├── example_usage.py
+├── requirements.txt
+├── models/
+└── additional-generated-files/
+```
+
+The application must not assume that every language generates the same file structure.
+
+## 14.5 Client Validation
+
+Where supported:
+
+- Check expected files.
+- Check generation status.
+- Validate syntax using language-specific tools.
+- Execute the generated example with controlled test inputs.
+- Capture exit code.
+- Capture sanitized stdout/stderr.
+- Display validation results.
+
+Generated code must be treated as untrusted code until reviewed.
+
+## 14.6 Download and Export
+
+Provide:
+
+- Download individual files.
+- Download complete project ZIP.
+- Export README.
+- Export source metadata.
+- Download compatible capture where authorized.
+
+Only serve files belonging to the authenticated user's accessible project.
+
+---
+
+# 15. Engineer Mode — Regenerate from Previous Captures
+
+Engineer Mode enables users to regenerate clients without repeating the initial browsing process when a compatible capture exists.
+
+## 15.1 Workflow
+
+1. Open a project.
+2. Select a previous capture or run.
+3. Validate capture compatibility.
+4. Select output language.
+5. Select supported AI backend/model.
+6. Submit the engineering request.
+7. Backend invokes the supported CLI engineer operation.
+8. Worker monitors execution.
+9. Generated output is saved as a new client version.
+10. Frontend displays the result.
+
+## 15.2 Requirements
+
+- Preserve original capture.
+- Preserve previous generated clients.
+- Maintain version history.
+- Associate regenerated clients with source capture.
+- Show compatibility errors.
+- Prevent accidental overwriting.
+- Track model/provider changes.
+
+A Chrome MCP run without a saved HAR must not be falsely presented as re-engineerable.
+
+---
+
+# 16. Generated Client Execution
+
+Users should be able to test a generated client through the frontend without accessing the backend terminal.
+
+## 16.1 Execution Workflow
+
+1. Select generated client.
+2. Select an available example or supported entry point.
+3. Enter validated parameters.
+4. Review the execution configuration.
+5. Start execution.
+6. Backend launches the controlled runner.
+7. Frontend receives status and output.
+8. Display result and execution details.
+
+## 16.2 Execution Safety
+
+- Never execute arbitrary user-supplied shell commands.
+- Use approved language-specific runners.
+- Run in isolated containers or equivalent restricted environments.
+- Apply CPU, memory and execution time limits.
+- Restrict filesystem access.
+- Restrict network access to explicitly authorized destinations.
+- Do not expose host credentials.
+- Do not allow privileged container execution.
+- Destroy temporary execution environments after completion.
+- Prevent generated code from accessing other users' artifacts.
+
+## 16.3 Execution Results
+
+Display:
+
+- Status.
+- Exit code.
+- Duration.
+- Output.
+- Error summary.
+- Relevant network activity, if captured by the runner.
+- Downloadable result files, if generated.
+
+---
+
+# 17. AI Provider and Model Management
+
+Location: Settings → AI Providers.
+
+## 17.1 Supported Provider Backends
+
+Provider support must match the original CLI's installed version.
+
+Examples include:
+
+- Claude.
+- OpenCode.
+- Cursor.
+- GitHub Copilot.
+- Codex.
+- Other officially supported CLI backends.
+
+The application must not assume that every provider uses the same authentication or configuration mechanism.
+
+## 17.2 Provider Configuration
+
+Fields may include:
+
+- Provider.
+- Model ID.
+- Display name.
+- Authentication status.
+- Provider-specific settings.
+- Default selection.
+- Availability.
+- Last health check.
+
+Only show fields relevant to the selected provider.
+
+## 17.3 Model Management
+
+- Add configuration.
+- Select default provider.
+- Select supported model.
+- Update model.
+- Test provider availability.
+- Enable/disable configuration.
+- View safe error information.
+
+Model lists should be sourced from supported provider capabilities or explicitly configured values.
+
+## 17.4 Credential Protection
+
+- Never expose credentials in frontend responses.
+- Store credentials using secure secret storage or encryption at rest.
+- Mask credentials.
+- Never log keys or tokens.
+- Exclude secrets from exports.
+- Limit access to the execution worker.
+- Support credential replacement and revocation.
+
+## 17.5 Provider Authentication Architecture
+
+Some reference CLI providers reuse local CLI authentication or user-specific authentication environments.
+
+The backend must explicitly manage the required authentication method.
+
+It must not assume that an API key is mandatory for every provider or that a user signing into a browser automatically authenticates a backend CLI provider.
+
+For hosted multi-user deployment, provider credentials and identity isolation require dedicated design.
+
+---
+
+# 18. Settings Center
+
+Settings categories:
+
+1. General.
+2. Workspace.
+3. AI Providers.
+4. Browser Providers.
+5. Execution.
+6. Output Languages.
+7. Storage.
+8. Security.
+9. Usage Limits.
+10. Notifications.
+11. Appearance.
+12. User Profile.
+13. System Health.
+14. Documentation.
+15. About.
+
+## 18.1 General Settings
+
+- Application name.
+- Workspace name.
+- Default project behavior.
+- Default discovery mode.
+- Default output language.
+- Default execution timeout.
+
+## 18.2 Browser Settings
+
+- Browser provider.
+- Headless/headed mode.
+- Browser availability.
+- Provider health status.
+- Browser timeout.
+- Supported capture mode.
+
+## 18.3 Execution Settings
+
+- Maximum concurrent jobs.
+- Maximum execution duration.
+- Per-job resource limits.
+- Artifact retention.
+- Worker availability.
+- Safe retry configuration.
+
+## 18.4 Storage Settings
+
+- Artifact storage location.
+- Maximum upload size.
+- Maximum project storage.
+- HAR retention.
+- Generated client retention.
+- Temporary-file cleanup.
+
+Storage paths must never be directly editable by ordinary users as arbitrary filesystem paths.
+
+---
+
+# 19. Run History and Activity
+
+## 19.1 Run Listing
+
+Display:
+
+- Run ID.
+- Project.
+- Target URL.
+- Task summary.
+- Execution mode.
+- Status.
+- Start time.
+- Duration.
+- Output language.
+- Endpoint count.
+- Generated client count.
+
+## 19.2 Run Detail
+
+Include:
+
+- Execution configuration.
+- Status timeline.
+- Activity events.
+- Sanitized logs.
+- Capture references.
+- Discovered endpoints.
+- Generated client.
+- Error details.
+- Resource usage where measurable.
+
+## 19.3 Run Actions
+
+- Open details.
+- Retry when appropriate.
+- Re-engineer compatible captures.
+- Download artifacts.
+- Archive.
+- Delete, subject to retention policy.
+
+## 19.4 History Integrity
+
+A run must remain associated with its original project, configuration snapshot and artifacts.
+
+Deleting a run must not silently delete shared artifacts used by other resources.
+
+---
+
+# 20. Notifications
+
+Support:
+
+- Job queued.
+- Job started.
+- Job completed.
+- Job failed.
+- Job cancelled.
+- Client generated.
+- Validation failed.
+- Storage warning.
+- Provider unavailable.
+- Worker unavailable.
+- Security event.
+
+Notifications must be generated from actual application events.
+
+Support in-app notifications initially. Email notifications may be added later.
+
+---
+
+# 21. Database Design
+
+## 21.1 Core Tables
+
+- `users`
+- `workspaces`
+- `workspace_members`
+- `roles`
+- `permissions`
+- `projects`
+- `project_settings`
+- `discovery_runs`
+- `run_events`
+- `run_logs`
+- `captures`
+- `api_endpoints`
+- `api_requests`
+- `api_responses`
+- `generated_clients`
+- `generated_client_files`
+- `client_versions`
+- `client_executions`
+- `ai_provider_configs`
+- `browser_provider_configs`
+- `user_preferences`
+- `notifications`
+- `activity_logs`
+- `storage_records`
+- `schema_migrations`
+
+## 21.2 Data Rules
+
+- Use UUIDs or equivalent unguessable identifiers for externally exposed resources.
+- Use foreign keys.
+- Index frequently queried fields.
+- Store monetary/usage values with appropriate precision where relevant.
+- Store timestamps consistently in UTC.
+- Convert timestamps to the user's configured timezone in the UI.
+- Use transactions for related database operations.
+- Use controlled deletion and archival.
+- Maintain migration history.
+- Maintain referential integrity.
+
+## 21.3 Run State Model
+
+Each run should contain:
+
+- ID.
+- Workspace ID.
+- User ID.
+- Project ID.
+- Engine run ID, if available.
+- Target URL.
+- Task.
+- Mode.
+- Provider.
+- Model.
+- Output language.
+- Status.
+- Started timestamp.
+- Finished timestamp.
+- Exit code.
+- Error summary.
+- Artifact references.
+- Execution configuration snapshot.
+
+The engine run ID and web application run ID must remain distinguishable.
+
+---
+
+# 22. File and Artifact Storage
+
+## 22.1 Storage Categories
+
+```text
+storage/
+├── projects/
+│   └── {project_id}/
+│       ├── runs/
+│       ├── captures/
+│       ├── clients/
+│       ├── exports/
+│       └── temp/
+├── uploads/
+├── logs/
+└── backups/
+```
+
+This represents logical storage organization. Production storage may use object storage rather than a local filesystem.
+
+## 22.2 Requirements
+
+- Private storage.
+- Randomized internal filenames.
+- Strict path validation.
+- File size limits.
+- MIME validation.
+- No public directory exposure.
+- Authorized download routes.
+- Temporary-file cleanup.
+- Artifact retention policies.
+- Storage usage monitoring.
+- Safe archive extraction.
+- Path traversal protection.
+
+## 22.3 Artifact Types
+
+- HAR captures.
+- Generated source files.
+- README files.
+- Example scripts.
+- Dependency files.
+- Execution reports.
+- Export ZIP archives.
+- Supported logs and metadata.
+
+---
+
+# 23. Security Architecture
+
+Security is a core product requirement because the application interacts with external websites, browser sessions, generated code, provider credentials and backend processes.
+
+## 23.1 Backend Security
+
+- Authentication and authorization.
+- Input validation.
+- CSRF protection where applicable.
+- Secure session management.
+- Rate limiting.
+- Strict CORS.
+- Secure HTTP headers.
+- Safe error handling.
+- Database query parameterization.
+- Dependency security updates.
+- Audit logging.
+
+## 23.2 CLI Execution Security
+
+- No unrestricted shell endpoint.
+- Fixed executable path.
+- Validated command arguments.
+- No string-concatenated shell commands.
+- Restricted environment variables.
+- Per-job working directories.
+- Process timeouts.
+- Process-tree termination.
+- Resource limits.
+- Worker isolation.
+- Controlled stdout/stderr processing.
+- No cross-project filesystem access.
+
+## 23.3 SSRF and Browser Security
+
+Because users provide target URLs, the application must defend against server-side request forgery.
+
+Requirements:
+
+- Allow only supported HTTP/HTTPS schemes.
+- Block loopback and private network targets by default.
+- Block cloud metadata addresses.
+- Resolve and validate DNS destinations.
+- Revalidate redirects.
+- Prevent DNS rebinding where feasible.
+- Restrict access to internal infrastructure.
+- Isolate browser sessions.
+- Prevent unauthorized access to internal services.
+- Apply destination policies to browser navigation and generated client execution.
+
+Authorized private testing environments may be supported through an explicit administrator-controlled allowlist.
+
+## 23.4 Browser Session Security
+
+- Isolate cookies and sessions.
+- Do not reuse sessions across unrelated users.
+- Protect session artifacts.
+- Avoid exposing browser debugging ports.
+- Do not expose raw browser control endpoints publicly.
+- Clean up sessions after expiry.
+- Require explicit user authorization for authenticated browsing.
+
+## 23.5 AI Security
+
+- Treat website content as untrusted input.
+- Defend against prompt injection.
+- Do not expose provider credentials to the model.
+- Limit tool access.
+- Validate model-generated outputs.
+- Restrict filesystem access.
+- Prevent unauthorized generated-code execution.
+- Maintain audit trails.
+
+## 23.6 Authorized Use
+
+The application must be designed for websites and accounts the user owns or is authorized to test.
+
+It must not provide features intended to bypass access controls, extract credentials, evade security controls or exploit unauthorized private endpoints.
+
+---
+
+# 24. Error Handling and Reliability
+
+The application must handle:
+
+- Invalid URLs.
+- Unsupported browser providers.
+- Missing CLI installation.
+- Incompatible CLI versions.
+- Missing provider authentication.
+- Invalid model configurations.
+- Browser startup failures.
+- Website navigation failures.
+- Network timeouts.
+- Bot-detection challenges.
+- Capture failures.
+- Missing HAR files.
+- Client-generation errors.
+- Unsupported output languages.
+- Worker crashes.
+- Process termination.
+- Disk/storage exhaustion.
+- Database outages.
+- WebSocket disconnections.
+- Generated client execution errors.
+
+Display understandable messages to the user.
+
+Detailed technical diagnostics should be restricted to authorized administrators and must be sanitized.
+
+A failed run must never be marked successful merely because a process returned a partial artifact.
+
+---
+
+# 25. UI/UX Design System
+
+## 25.1 Visual Direction
+
+The application should feel like a premium developer productivity platform.
+
+Design references may include:
+
+- Linear.
+- Vercel.
+- Raycast.
+- Postman.
+- Modern cloud developer dashboards.
+
+The goal is a clean, precise and information-rich interface without unnecessary decoration.
+
+## 25.2 Design Principles
+
+- Minimal visual clutter.
+- Clear typography hierarchy.
+- Consistent spacing.
+- Restrained shadows.
+- Subtle borders.
+- Professional color palette.
+- Strong information hierarchy.
+- Consistent iconography.
+- Fast interactions.
+- Responsive layouts.
+- Accessible contrast.
+- Useful empty states.
+- Clear error messages.
+
+Avoid excessive gradients, glassmorphism, neon effects, unnecessary animations and oversized dashboard cards.
+
+## 25.3 Theme Modes
+
+- Light.
+- Dark.
+- System.
+
+## 25.4 Reusable Components
+
+- Sidebar.
+- Topbar.
+- Breadcrumbs.
+- Page header.
+- KPI cards.
+- Data tables.
+- Filter bars.
+- Search.
+- Pagination.
+- Tabs.
+- Dropdowns.
+- Modal dialogs.
+- Drawers.
+- Toasts.
+- Status badges.
+- Progress indicators.
+- Activity timeline.
+- Code editor.
+- JSON viewer.
+- Request/response inspector.
+- File tree.
+- Artifact cards.
+- Empty states.
+- Loading skeletons.
+- Error boundaries.
+- Confirmation dialogs.
+
+## 25.5 Animation
+
+Animations should be functional and restrained.
+
+Use motion for:
+
+- Sidebar transitions.
+- Dialog and drawer entry.
+- Dropdowns.
+- Toast notifications.
+- Loading indicators.
+- Progress updates.
+- Tab transitions.
+- Expanding JSON nodes.
+
+Respect reduced-motion preferences.
+
+---
+
+# 26. Responsive Design and Accessibility
+
+## Desktop
+
+- Full sidebar.
+- Detailed endpoint inspector.
+- Multi-column dashboard.
+- Side-by-side request/response panels.
+- Code editor with file tree.
+
+## Tablet
+
+- Compact navigation.
+- Adaptive dashboard cards.
+- Collapsible inspector panels.
+- Responsive tables.
+
+## Mobile
+
+- Drawer navigation.
+- Single-column forms.
+- Responsive KPI cards.
+- Stacked request/response sections.
+- Touch-friendly controls.
+- Mobile-friendly code viewer.
+- No horizontal page overflow.
+
+## Accessibility
+
+- Keyboard navigation.
+- Visible focus indicators.
+- Accessible labels.
+- Appropriate contrast.
+- Screen-reader-friendly status updates.
+- Reduced-motion support.
+- Clear form validation.
+
+---
+
+# 27. Documentation and Help Center
+
+Add Settings → Documentation.
+
+Categories:
+
+1. Getting Started.
+2. Creating Projects.
+3. API Discovery.
+4. Agent Mode.
+5. Manual Capture.
+6. Engineer Mode.
+7. Browser Providers.
+8. AI Provider Setup.
+9. Endpoint Explorer.
+10. Request/Response Inspector.
+11. HAR Management.
+12. Generated API Clients.
+13. Client Execution.
+14. Run History.
+15. Storage and Downloads.
+16. Security and Authorized Use.
+17. Troubleshooting.
+18. FAQ.
+
+Documentation must explain actual supported functionality and limitations.
+
+Do not document unsupported browser workflows as if they are already operational.
+
+---
+
+# 28. Testing Requirements
+
+## 28.1 Functional Testing
+
+- Authentication.
+- Project creation.
+- Project editing.
+- Project deletion.
+- Discovery form validation.
+- Agent execution.
+- Browser initialization.
+- CLI invocation.
+- Live execution updates.
+- Cancellation.
+- Endpoint extraction.
+- HAR management.
+- Client generation.
+- Engineer mode.
+- Code viewing.
+- Client download.
+- Client execution.
+- AI provider configuration.
+- Run history.
+- WebSocket reconnection.
+- Storage access.
+
+## 28.2 Integration Testing
+
+- Frontend-to-backend API communication.
+- Backend-to-worker communication.
+- Worker-to-CLI communication.
+- CLI JSON output parsing.
+- CLI process exit codes.
+- Artifact discovery.
+- Database persistence.
+- WebSocket event delivery.
+- Browser provider availability.
+
+## 28.3 Security Testing
+
+- Unauthorized project access.
+- Cross-user artifact access.
+- SSRF.
+- DNS rebinding.
+- Malicious URL input.
+- Command injection.
+- Path traversal.
+- Malicious archive uploads.
+- Credential exposure.
+- WebSocket authorization.
+- Session security.
+- Prompt injection.
+- Unsafe generated code execution.
+- Process isolation.
+- Resource exhaustion.
+- Privilege escalation.
+
+## 28.4 Reliability Testing
+
+- Worker restart.
+- Backend restart during execution.
+- Browser crash.
+- Network interruption.
+- Database disconnection.
+- Duplicate job submission.
+- Cancellation during execution.
+- Large HAR files.
+- Large generated clients.
+- Expired sessions.
+- Artifact cleanup.
+
+## 28.5 UI Testing
+
+- Desktop.
+- Tablet.
+- Mobile.
+- Light mode.
+- Dark mode.
+- Loading states.
+- Empty states.
+- Error states.
+- Long code files.
+- Large request payloads.
+- Long-running executions.
+
+---
+
+# 29. Development Phases
+
+## Phase 1 — Foundation and Architecture
+
+- Repository setup.
+- Frontend initialization.
+- Backend initialization.
+- Database setup.
+- Authentication.
+- Global layout.
+- Design system.
+- Configuration management.
+- CLI installation and version verification.
+- Backend health checks.
+
+**Deliverable:** Functional frontend and backend foundation.
+
+## Phase 2 — CLI Integration
+
+- CLI wrapper service.
+- Safe subprocess execution.
+- JSON output parsing.
+- Background worker.
+- Job lifecycle.
+- Run metadata.
+- Cancellation.
+- Artifact management.
+
+**Deliverable:** Backend can execute supported CLI operations without exposing terminal access.
+
+## Phase 3 — Projects and Discovery
+
+- Project management.
+- Discovery form.
+- URL validation.
+- Task input.
+- Agent mode.
+- Supported browser configuration.
+- Job creation.
+- Live status updates.
+
+**Deliverable:** User can start and monitor an API discovery session from the frontend.
+
+## Phase 4 — API Inspection
+
+- Endpoint explorer.
+- Request/response inspector.
+- HAR management.
+- Capture details.
+- Endpoint search.
+- Filtering.
+
+**Deliverable:** Users can inspect captured API activity.
+
+## Phase 5 — Generated Clients
+
+- Client listing.
+- Code viewer.
+- File tree.
+- README display.
+- Download.
+- ZIP export.
+- Engineer mode.
+- Version history.
+
+**Deliverable:** Users can generate, inspect and download API clients.
+
+## Phase 6 — Execution and Validation
+
+- Controlled client runner.
+- Execution isolation.
+- Example execution.
+- Output viewer.
+- Error reporting.
+- Resource limits.
+
+**Deliverable:** Users can test generated clients through the frontend.
+
+## Phase 7 — Provider and Settings
+
+- AI provider configuration.
+- Browser provider configuration.
+- Output language preferences.
+- Execution limits.
+- Storage settings.
+- User preferences.
+
+**Deliverable:** Configurable application environment.
+
+## Phase 8 — Dashboard and Analytics
+
+- KPI cards.
+- Execution analytics.
+- Project analytics.
+- Endpoint trends.
+- Language distribution.
+- Activity history.
+
+**Deliverable:** Complete developer dashboard.
+
+## Phase 9 — Security and Reliability
+
+- Security testing.
+- Process isolation.
+- SSRF protection.
+- Artifact access control.
+- WebSocket security.
+- Failure recovery.
+- Performance optimization.
+
+**Deliverable:** Production-oriented application security baseline.
+
+## Phase 10 — Documentation and Release
+
+- User manual.
+- Installation guide.
+- CLI integration guide.
+- Configuration guide.
+- Troubleshooting.
+- Final QA.
+- Deployment documentation.
+- Release preparation.
+
+**Deliverable:** Tested and documented application.
+
+---
+
+# 30. Acceptance Criteria
+
+The application is ready for its initial release only when:
+
+1. The product operates through a professional web frontend.
+2. Backend terminal execution is completely hidden from ordinary users.
+3. Frontend never invokes shell commands directly.
+4. The original CLI is integrated through a controlled backend service.
+5. Long-running CLI jobs execute in background workers.
+6. Users can create and manage projects.
+7. Users can enter authorized target URLs and task descriptions.
+8. The application validates target URLs.
+9. Supported agent execution works.
+10. Unsupported browser modes are clearly identified.
+11. Users can monitor actual execution status.
+12. Users can cancel their own active runs.
+13. The application can inspect captured API requests.
+14. Endpoint information is presented in a structured interface.
+15. HAR artifacts can be managed securely.
+16. API clients can be generated using supported languages.
+17. Generated files can be inspected and downloaded.
+18. Compatible previous captures can be re-engineered.
+19. Generated client execution is isolated.
+20. AI provider configuration is protected.
+21. Run history persists after page refresh.
+22. WebSocket disconnections can recover without losing job state.
+23. Project and artifact authorization is enforced server-side.
+24. Private files are not publicly accessible.
+25. SSRF and command-injection protections are tested.
+26. UI is responsive.
+27. Loading, success, failure and empty states are implemented.
+28. The product has complete installation and user documentation.
+29. No fabricated run data or execution status is displayed.
+30. The application passes functional, integration and security tests.
+
+---
+
+# 31. Future Roadmap
+
+The following capabilities may be introduced after the initial release.
+
+### Advanced API Intelligence
+
+- Endpoint relationship graphs.
+- API schema extraction.
+- OpenAPI specification generation.
+- Endpoint dependency mapping.
+- Automatic pagination detection.
+- Authentication-flow documentation.
+- Request comparison across runs.
+
+### Advanced Development Tools
+
+- API collections.
+- Request replay.
+- Environment management.
+- Client customization.
+- Generated test suites.
+- Type/schema generation.
+- SDK version comparison.
+
+### Collaboration
+
+- Multi-user workspaces.
+- Project sharing.
+- Team roles.
+- Run comments.
+- Shared API documentation.
+- Team activity logs.
+
+### SaaS Infrastructure
+
+- Subscription plans.
+- Usage limits.
+- Job quotas.
+- Storage quotas.
+- Team billing.
+- Dedicated execution environments.
+- Cloud browser sessions.
+
+These features must not delay the initial working product.
+
+---
+
+# 32. Final Product Definition
+
+Reverse API Engineer is a web-based API engineering platform powered by the original Reverse API Engineer CLI.
+
+The frontend provides a complete graphical experience for project management, website discovery, API inspection, request/response analysis, capture management, client generation, client execution and run history.
+
+The backend privately orchestrates the CLI, browser automation, AI providers and artifact storage.
+
+Users interact with the application exclusively through the frontend. They never need to access the backend terminal or manage CLI commands manually.
+
+The original engine remains the source of core reverse-engineering capabilities. The web application adds a secure, structured, responsive and user-friendly interface around those capabilities.
+
+**Primary development priorities:**
+
+1. Correct integration with the original CLI.
+2. Complete separation of frontend and backend execution.
+3. Secure hidden terminal architecture.
+4. Reliable background job processing.
+5. Accurate API capture and endpoint inspection.
+6. Functional API client generation.
+7. Safe artifact and generated-code handling.
+8. Real-time execution monitoring.
+9. Professional developer-focused UI/UX.
+10. Maintainable and extensible architecture.
+
+**The final goal is not a terminal displayed inside a browser. It is a complete web application whose backend privately operates the engineering engine.**
