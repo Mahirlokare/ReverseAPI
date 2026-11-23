@@ -1,47 +1,158 @@
+version: '3.8'
+
 services:
-  api:
-    build:
-      context: .
-      args:
-        INSTALL_PLAYWRIGHT: "1"
-    ports: ["8000:8000"]
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: reverse-api-engineer-postgres
     environment:
-      DATABASE_URL: postgresql+psycopg://apiscope:apiscope@postgres:5432/apiscope
-      REDIS_URL: redis://redis:6379/0
+      POSTGRES_DB: reverse_api_engineer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - reverse-api-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: reverse-api-engineer-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - reverse-api-network
+
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reverse-api-engineer-backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/reverse_api_engineer
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=development
+      - DEBUG=true
+    volumes:
+      - ./backend:/app
+      - artifact_storage:/app/storage
+    ports:
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
-  worker:
-    build: .
-    command: celery -A apiscope.worker.celery_app worker --loglevel=INFO
+        condition: service_healthy
+    networks:
+      - reverse-api-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reverse-api-engineer-celery
     environment:
-      DATABASE_URL: postgresql+psycopg://apiscope:apiscope@postgres:5432/apiscope
-      REDIS_URL: redis://redis:6379/0
-    depends_on: [postgres,redis]
-  postgres:
-    image: postgres:16-alpine
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/reverse_api_engineer
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=development
+      - DEBUG=true
+    volumes:
+      - ./backend:/app
+      - artifact_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - reverse-api-network
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=3
+
+  # Celery Beat (scheduler)
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reverse-api-engineer-celery-beat
     environment:
-      POSTGRES_DB: apiscope
-      POSTGRES_USER: apiscope
-      POSTGRES_PASSWORD: apiscope
-    volumes: [apiscope_pg:/var/lib/postgresql/data]
-    healthcheck:
-      test: ["CMD-SHELL","pg_isready -U apiscope -d apiscope"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-  redis:
-    image: redis:7-alpine
-    command: ["redis-server","--appendonly","yes"]
-    volumes: [apiscope_redis:/data]
-  ui:
-    build: ./ui
-    ports: ["5173:5173"]
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/reverse_api_engineer
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=development
+      - DEBUG=true
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - reverse-api-network
+    command: celery -A app.workers.celery_app beat --loglevel=info
+
+  # Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: reverse-api-engineer-frontend
     environment:
-      VITE_API_BASE: http://localhost:8000
-    depends_on: [api]
+      - VITE_API_URL=http://localhost:8000/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - reverse-api-network
+    command: npm run dev -- --host 0.0.0.0
+
+  # Playwright (for browser automation)
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.40.0-focal
+    container_name: reverse-api-engineer-playwright
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - playwright_browsers:/ms-playwright
+    networks:
+      - reverse-api-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
 volumes:
-  apiscope_pg:
-  apiscope_redis:
+  postgres_data:
+  redis_data:
+  artifact_storage:
+  playwright_browsers:
+
+networks:
+  reverse-api-network:
+    driver: bridge
