@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from pydantic import BaseModel, EmailStr
 
 from app.core.config import settings
@@ -61,7 +61,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     normalized_email = user_data.email.strip().lower()
 
     # Check if user exists
-    result = await db.execute(select(User).where(User.email == normalized_email))
+    result = await db.execute(select(User).where(func.lower(User.email) == normalized_email))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,8 +75,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         full_name=user_data.full_name,
     )
     db.add(user)
-    await db.commit()
-    await db.refresh(user)
+    await db.flush()
 
     # Create default workspace
     from app.models import Workspace, WorkspaceMember, UserRole
