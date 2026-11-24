@@ -128,9 +128,10 @@ export function NewDiscoveryPage() {
       // The API requires every run to belong to a project. Create one when
       // the user leaves the optional project selector empty.
       if (!projectId) {
-        const workspace = workspaces?.[0]
+        const availableWorkspaces = workspaces ?? (await api.get<Array<{ id: string; name: string }>>('/workspaces/me/workspaces')).data
+        const workspace = availableWorkspaces[0]
         if (!workspace) {
-          throw new Error('No workspace is available for this account. Sign out and sign in again, or create a workspace in Settings.')
+          throw new Error('This account has no workspace yet. Open Settings and create a workspace before starting discovery.')
         }
 
         const hostname = new URL(data.target_url).hostname
