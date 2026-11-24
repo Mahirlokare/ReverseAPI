@@ -85,6 +85,14 @@ export function NewDiscoveryPage() {
     },
   })
 
+  const { data: workspaces } = useQuery({
+    queryKey: ['workspaces', 'mine'],
+    queryFn: async () => {
+      const response = await api.get<Array<{ id: string; name: string }>>('/workspaces/me/workspaces')
+      return response.data
+    },
+  })
+
   const { data: aiProviders } = useQuery({
     queryKey: ['ai-providers'],
     queryFn: async () => {
@@ -114,14 +122,52 @@ export function NewDiscoveryPage() {
   const watchedOutputLanguage = watch('output_language')
 
   const createMutation = useMutation({
-    mutationFn: (data: DiscoveryForm) => api.post('/runs', data),
+    mutationFn: async (data: DiscoveryForm) => {
+      let projectId = data.project_id
+
+      // The API requires every run to belong to a project. Create one when
+      // the user leaves the optional project selector empty.
+      if (!projectId) {
+        const workspace = workspaces?.[0]
+        if (!workspace) {
+          throw new Error('No workspace is available for this account. Sign out and sign in again, or create a workspace in Settings.')
+        }
+
+        const hostname = new URL(data.target_url).hostname
+        const projectResponse = await api.post('/projects', {
+          workspace_id: workspace.id,
+          name: hostname.slice(0, 240),
+          description: data.task.slice(0, 1000),
+          target_website: data.target_url,
+          default_task: data.task,
+          default_output_language: data.output_language,
+          default_execution_mode: data.mode,
+        })
+        projectId = projectResponse.data.id
+      }
+
+      const [provider, selectedModel] = (data.ai_provider || '').split(':', 2)
+      const runPayload = {
+        project_id: projectId,
+        target_url: data.target_url,
+        task: data.task,
+        mode: data.mode,
+        output_language: data.output_language,
+        browser_provider: data.browser_provider,
+        ai_provider: provider || undefined,
+        model: data.model || selectedModel || undefined,
+      }
+      return api.post('/runs', runPayload)
+    },
     onSuccess: (response) => {
       toast.success('Discovery started!')
       navigate(`/runs/${response.data.id}`)
     },
     onError: (error: unknown) => {
-      const axiosError = error as { response?: { data?: { detail?: string } } }
-      toast.error(axiosError.response?.data?.detail || 'Failed to start discovery')
+      const axiosError = error as { message?: string; response?: { data?: { detail?: string | Array<{ msg?: string }> } } }
+      const detail = axiosError.response?.data?.detail
+      const message = Array.isArray(detail) ? detail.map(item => item.msg).filter(Boolean).join('; ') : detail
+      toast.error(message || axiosError.message || 'Failed to start discovery')
     },
   })
 
