@@ -68,7 +68,7 @@ export function Layout() {
         className={cn(
           'fixed lg:static z-50 flex h-full flex-col border-r bg-card transition-all duration-300',
           sidebarCollapsed ? 'w-16' : 'w-64',
-          !sidebarOpen && 'lg:hidden -translate-x-full'
+          !sidebarOpen && '-translate-x-full lg:translate-x-0'
         )}
         aria-label="Main navigation"
       >
@@ -112,7 +112,10 @@ export function Layout() {
                 )}
                 aria-current={isActive ? 'page' : undefined}
                 title={sidebarCollapsed ? item.name : undefined}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => {
+                  // Navigation should only close the drawer on mobile; desktop navigation stays visible.
+                  if (window.matchMedia('(max-width: 1023px)').matches) setSidebarOpen(false)
+                }}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
                 {!sidebarCollapsed && (
