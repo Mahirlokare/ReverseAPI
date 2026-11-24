@@ -57,8 +57,11 @@ class Message(BaseModel):
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+    # Normalize email addresses consistently across registration and login.
+    normalized_email = user_data.email.strip().lower()
+
     # Check if user exists
-    result = await db.execute(select(User).where(User.email == user_data.email))
+    result = await db.execute(select(User).where(User.email == normalized_email))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -67,7 +70,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
     # Create user
     user = User(
-        email=user_data.email,
+        email=normalized_email,
         hashed_password=get_password_hash(user_data.password),
         full_name=user_data.full_name,
     )
@@ -135,7 +138,8 @@ async def login(
             detail="Missing email/username or password",
         )
 
-    result = await db.execute(select(User).where(User.email == username))
+    normalized_email = str(username).strip().lower()
+    result = await db.execute(select(User).where(User.email == normalized_email))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(password, user.hashed_password):
@@ -239,14 +243,15 @@ async def update_current_user(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    if user_update.email != current_user.email:
-        result = await db.execute(select(User).where(User.email == user_update.email))
+    normalized_email = user_update.email.strip().lower()
+    if normalized_email != current_user.email:
+        result = await db.execute(select(User).where(User.email == normalized_email))
         if result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already in use",
             )
-        current_user.email = user_update.email
+        current_user.email = normalized_email
 
     if user_update.full_name is not None:
         current_user.full_name = user_update.full_name
