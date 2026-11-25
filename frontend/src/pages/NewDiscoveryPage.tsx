@@ -46,7 +46,7 @@ const BrowserProvider = {
 const discoverySchema = z.object({
   target_url: z.string().url('Please enter a valid URL (including http:// or https://)'),
   task: z.string().min(10, 'Please describe what you want to discover (at least 10 characters)'),
-  project_id: z.string().uuid().optional(),
+  project_id: z.string().optional().or(z.literal('')),
   mode: z.nativeEnum(ExecutionMode).default(ExecutionMode.AGENT),
   output_language: z.nativeEnum(OutputLanguage).default(OutputLanguage.TYPESCRIPT),
   ai_provider: z.string().optional(),
@@ -106,10 +106,14 @@ export function NewDiscoveryPage() {
     handleSubmit,
     watch,
     setValue,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<DiscoveryForm>({
     resolver: zodResolver(discoverySchema),
     defaultValues: {
+      target_url: '',
+      task: '',
+      project_id: '',
       mode: ExecutionMode.AGENT,
       output_language: OutputLanguage.TYPESCRIPT,
       browser_provider: BrowserProvider.PLAYWRIGHT,
@@ -122,43 +126,17 @@ export function NewDiscoveryPage() {
   const watchedOutputLanguage = watch('output_language')
 
   const createMutation = useMutation({
-    mutationFn: async (data: DiscoveryForm) => {
-      let projectId = data.project_id
-
-      // The API requires every run to belong to a project. Create one when
-      // the user leaves the optional project selector empty.
-      if (!projectId) {
-        const availableWorkspaces = workspaces ?? (await api.get<Array<{ id: string; name: string }>>('/workspaces/me/workspaces')).data
-        const workspace = availableWorkspaces[0]
-        if (!workspace) {
-          throw new Error('This account has no workspace yet. Open Settings and create a workspace before starting discovery.')
-        }
-
-        const hostname = new URL(data.target_url).hostname
-        const projectResponse = await api.post('/projects', {
-          workspace_id: workspace.id,
-          name: hostname.slice(0, 240),
-          description: data.task.slice(0, 1000),
-          target_website: data.target_url,
-          default_task: data.task,
-          default_output_language: data.output_language,
-          default_execution_mode: data.mode,
-        })
-        projectId = projectResponse.data.id
-      }
-
+    mutationFn: (data: DiscoveryForm) => {
       const [provider, selectedModel] = (data.ai_provider || '').split(':', 2)
-      const runPayload = {
-        project_id: projectId,
-        target_url: data.target_url,
-        task: data.task,
-        mode: data.mode,
-        output_language: data.output_language,
-        browser_provider: data.browser_provider,
+      const payload: Record<string, unknown> = {
+        ...data,
         ai_provider: provider || undefined,
         model: data.model || selectedModel || undefined,
       }
-      return api.post('/runs', runPayload)
+      if (!payload.project_id || (payload.project_id as string).trim() === '') {
+        delete payload.project_id
+      }
+      return api.post('/runs', payload)
     },
     onSuccess: (response) => {
       toast.success('Discovery started!')
@@ -371,6 +349,7 @@ export function NewDiscoveryPage() {
 
   const renderStep3 = () => {
     const formData = watch()
+    const taskPreview = formData.task ? (formData.task.length > 80 ? formData.task.slice(0, 80) + '...' : formData.task) : 'None'
     return (
       <div className="space-y-6">
         <div className="p-4 bg-muted/50 rounded-lg">
@@ -378,23 +357,23 @@ export function NewDiscoveryPage() {
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Target URL</dt>
-              <dd className="font-medium truncate max-w-md">{formData.target_url}</dd>
+              <dd className="font-medium truncate max-w-md">{formData.target_url || 'None'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Task</dt>
-              <dd className="font-medium truncate max-w-md">{formData.task.slice(0, 80)}...</dd>
+              <dd className="font-medium truncate max-w-md">{taskPreview}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Execution Mode</dt>
-              <dd className="font-medium capitalize">{formData.mode}</dd>
+              <dd className="font-medium capitalize">{formData.mode || 'agent'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Output Language</dt>
-              <dd className="font-medium capitalize">{formData.output_language}</dd>
+              <dd className="font-medium capitalize">{formData.output_language || 'typescript'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Browser Provider</dt>
-              <dd className="font-medium">{formData.browser_provider}</dd>
+              <dd className="font-medium">{formData.browser_provider || 'playwright'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Headless Mode</dt>
@@ -402,7 +381,7 @@ export function NewDiscoveryPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Timeout</dt>
-              <dd className="font-medium">{formData.timeout}s</dd>
+              <dd className="font-medium">{formData.timeout || 3600}s</dd>
             </div>
             {formData.ai_provider && (
               <div className="flex justify-between">
@@ -427,6 +406,14 @@ export function NewDiscoveryPage() {
         </div>
       </div>
     )
+  }
+
+  const handleNextStep = async () => {
+    if (step === 1) {
+      const valid = await trigger(['target_url', 'task'])
+      if (!valid) return
+    }
+    setStep(s => Math.min(3, s + 1))
   }
 
   const currentStepContent = step === 1 ? renderStep1() : step === 2 ? renderStep2() : renderStep3()
@@ -507,7 +494,7 @@ export function NewDiscoveryPage() {
               </Button>
               <div className="flex gap-2">
                 {step < 3 && (
-                  <Button type="button" onClick={() => setStep(s => Math.min(3, s + 1))}>
+                  <Button type="button" onClick={handleNextStep}>
                     Next
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>

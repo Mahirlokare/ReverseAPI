@@ -81,7 +81,9 @@ export function App() {
         <Route index element={<DashboardPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="projects/new" element={<NewDiscoveryPage />} />
+        <Route path="discover" element={<NewDiscoveryPage />} />
         <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+        <Route path="runs" element={<ProjectsPage />} />
         <Route path="runs/:runId" element={<RunMonitorPage />} />
         <Route path="endpoints" element={<EndpointsPage />} />
         <Route path="captures" element={<CapturesPage />} />

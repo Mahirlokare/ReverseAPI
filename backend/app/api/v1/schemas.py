@@ -216,7 +216,7 @@ class RunBase(BaseModel):
 
 
 class RunCreate(RunBase):
-    project_id: UUID
+    project_id: Optional[UUID] = None
 
 
 class RunUpdate(BaseModel):

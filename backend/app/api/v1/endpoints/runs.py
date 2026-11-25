@@ -59,22 +59,56 @@ async def create_run(
     # SSRF Protection
     validate_target_url(run_data.target_url)
 
-    # Check project access
-    result = await db.execute(
-        select(Project)
-        .join(WorkspaceMember, Project.workspace_id == WorkspaceMember.workspace_id)
-        .where(
-            Project.id == run_data.project_id,
-            WorkspaceMember.user_id == current_user.id,
+    # Check or auto-create project
+    if run_data.project_id:
+        result = await db.execute(
+            select(Project)
+            .join(WorkspaceMember, Project.workspace_id == WorkspaceMember.workspace_id)
+            .where(
+                Project.id == run_data.project_id,
+                WorkspaceMember.user_id == current_user.id,
+            )
         )
-    )
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found or not authorized")
+        project = result.scalar_one_or_none()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found or not authorized")
+    else:
+        # Auto-create project for target website
+        ws_result = await db.execute(
+            select(WorkspaceMember.workspace_id).where(WorkspaceMember.user_id == current_user.id)
+        )
+        workspace_id = ws_result.scalars().first()
+        if not workspace_id:
+            from app.models import Workspace, UserRole
+            workspace = Workspace(
+                name=f"{current_user.full_name or current_user.email}'s Workspace",
+                slug=f"ws-{current_user.id.hex[:8]}",
+                owner_id=current_user.id,
+            )
+            db.add(workspace)
+            await db.flush()
+            member = WorkspaceMember(workspace_id=workspace.id, user_id=current_user.id, role=UserRole.OWNER)
+            db.add(member)
+            await db.flush()
+            workspace_id = workspace.id
+
+        domain = urllib.parse.urlparse(run_data.target_url).netloc or "Discovered Target"
+        project = Project(
+            name=f"Project ({domain})",
+            target_website=run_data.target_url,
+            workspace_id=workspace_id,
+            owner_id=current_user.id,
+            default_output_language=run_data.output_language,
+            default_execution_mode=run_data.mode,
+        )
+        db.add(project)
+        await db.flush()
 
     # Create run record
+    run_dict = run_data.model_dump()
+    run_dict["project_id"] = project.id
     run = DiscoveryRun(
-        **run_data.model_dump(),
+        **run_dict,
         user_id=current_user.id,
         workspace_id=project.workspace_id,
         status=RunStatus.QUEUED,

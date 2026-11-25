@@ -186,7 +186,9 @@ export function RunMonitorPage() {
               <span className="text-sm text-muted-foreground font-mono">Engine: {run.engine_run_id}</span>
             )}
           </div>
-          <h1 className="text-2xl font-bold mt-2">{run.task.slice(0, 80)}{run.task.length > 80 ? '...' : ''}</h1>
+          <h1 className="text-2xl font-bold mt-2">
+            {run.task ? (run.task.length > 80 ? run.task.slice(0, 80) + '...' : run.task) : 'API Discovery Run'}
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {run.target_url} • {formatDate(run.created_at)} • {run.mode} mode
           </p>
@@ -260,8 +262,15 @@ export function RunMonitorPage() {
                   { key: 'validating_output', label: 'Validating Output' },
                   { key: 'completed', label: 'Completed' },
                 ].map((stage, index) => {
+                  const stageOrder = [
+                    'queued', 'initializing', 'browser_starting', 'navigating',
+                    'interacting', 'capturing_traffic', 'analyzing_requests',
+                    'generating_client', 'validating_output', 'completed'
+                  ]
+                  const currentIdx = stageOrder.indexOf(run.status)
+                  const thisIdx = stageOrder.indexOf(stage.key)
                   const stageStatus = run.status === stage.key ? 'current' :
-                    terminalStatuses.indexOf(run.status) > terminalStatuses.indexOf(stage.key) ? 'completed' : 'pending'
+                    (run.status === 'completed' || (currentIdx > thisIdx && currentIdx !== -1)) ? 'completed' : 'pending'
                   const isLast = index === 9
                   return (
                     <div key={stage.key} className="flex items-start gap-4">
