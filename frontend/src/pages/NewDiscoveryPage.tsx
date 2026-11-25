@@ -92,11 +92,14 @@ export function NewDiscoveryPage() {
     },
   })
 
-  const { data: aiProviders } = useQuery({
+  const { data: aiProviders = [] } = useQuery({
     queryKey: ['ai-providers'],
     queryFn: async () => {
-      const response = await api.get<AIProvider[]>('/ai-providers')
-      return response.data
+      const response = await api.get<{ items?: AIProvider[] } | AIProvider[]>('/ai-providers')
+      if (Array.isArray(response.data)) {
+        return response.data
+      }
+      return response.data?.items ?? []
     },
   })
 
@@ -304,7 +307,7 @@ export function NewDiscoveryPage() {
               id="ai_provider"
             >
               <option value="">Default AI Provider</option>
-              {aiProviders?.map((p) => (
+              {(Array.isArray(aiProviders) ? aiProviders : []).map((p) => (
                 <option key={`${p.provider}-${p.model_id}`} value={`${p.provider}:${p.model_id}`}>
                   {p.display_name || `${p.provider} (${p.model_id})`} {p.is_default && '(default)'}
                 </option>

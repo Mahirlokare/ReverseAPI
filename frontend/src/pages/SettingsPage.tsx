@@ -67,19 +67,25 @@ export function SettingsPage() {
     },
   })
 
-  const { data: aiProviders } = useQuery({
+  const { data: aiProviders = [] } = useQuery({
     queryKey: ['ai-providers'],
     queryFn: async () => {
-      const response = await api.get<AIProviderConfig[]>('/ai-providers')
-      return response.data
+      const response = await api.get<{ items?: AIProviderConfig[] } | AIProviderConfig[]>('/ai-providers')
+      if (Array.isArray(response.data)) {
+        return response.data
+      }
+      return response.data?.items ?? []
     },
   })
 
-  const { data: browserProviders } = useQuery({
+  const { data: browserProviders = [] } = useQuery({
     queryKey: ['browser-providers'],
     queryFn: async () => {
-      const response = await api.get<BrowserProviderConfig[]>('/browser-providers')
-      return response.data
+      const response = await api.get<{ items?: BrowserProviderConfig[] } | BrowserProviderConfig[]>('/browser-providers')
+      if (Array.isArray(response.data)) {
+        return response.data
+      }
+      return response.data?.items ?? []
     },
   })
 
