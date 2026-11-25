@@ -46,10 +46,10 @@ export function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     try {
-      const response = await api.post('/auth/register', {
+      await api.post('/auth/register', {
         email: data.email,
         password: data.password,
-        full_name: data.full_name,
+        full_name: data.full_name?.trim() ? data.full_name.trim() : undefined,
       })
 
       // Auto-login after registration
@@ -66,8 +66,10 @@ export function RegisterPage() {
       toast.success('Account created successfully!')
       navigate('/')
     } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { detail?: string } } }
-      toast.error(axiosError.response?.data?.detail || 'Registration failed')
+      const axiosError = error as { response?: { data?: { detail?: string | Array<{ msg?: string }> } } }
+      const detail = axiosError.response?.data?.detail
+      const message = Array.isArray(detail) ? detail.map(d => d.msg).filter(Boolean).join('; ') : detail
+      toast.error(message || 'Registration failed')
     } finally {
       setIsLoading(false)
     }

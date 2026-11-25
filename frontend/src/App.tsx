@@ -14,6 +14,7 @@ import { ClientsPage } from './pages/ClientsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { DocumentationPage } from './pages/DocumentationPage'
 import { LoadingSpinner } from './components/ui/LoadingSpinner'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -30,7 +31,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />
   }
 
-  return <>{children}</>
+  return <ErrorBoundary>{children}</ErrorBoundary>
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -48,50 +49,52 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/" replace />
   }
 
-  return <>{children}</>
+  return <ErrorBoundary>{children}</ErrorBoundary>
 }
 
 export function App() {
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <RegisterPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<DashboardPage />} />
-        <Route path="projects" element={<ProjectsPage />} />
-        <Route path="projects/new" element={<NewDiscoveryPage />} />
-        <Route path="discover" element={<NewDiscoveryPage />} />
-        <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-        <Route path="runs" element={<ProjectsPage />} />
-        <Route path="runs/:runId" element={<RunMonitorPage />} />
-        <Route path="endpoints" element={<EndpointsPage />} />
-        <Route path="captures" element={<CapturesPage />} />
-        <Route path="clients" element={<ClientsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="docs" element={<DocumentationPage />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <RegisterPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<DashboardPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="projects/new" element={<NewDiscoveryPage />} />
+          <Route path="discover" element={<NewDiscoveryPage />} />
+          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+          <Route path="runs" element={<ProjectsPage />} />
+          <Route path="runs/:runId" element={<RunMonitorPage />} />
+          <Route path="endpoints" element={<EndpointsPage />} />
+          <Route path="captures" element={<CapturesPage />} />
+          <Route path="clients" element={<ClientsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="docs" element={<DocumentationPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   )
 }

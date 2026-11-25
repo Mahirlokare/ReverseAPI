@@ -45,10 +45,17 @@ api.interceptors.response.use(
           setAuthTokens({ access_token, refresh_token })
           originalRequest.headers.Authorization = `Bearer ${access_token}`
           return api(originalRequest)
+        } else {
+          clearAuthTokens()
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+            window.location.href = '/login'
+          }
         }
       } catch (refreshError) {
         clearAuthTokens()
-        window.location.href = '/login'
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login'
+        }
         return Promise.reject(refreshError)
       }
     }

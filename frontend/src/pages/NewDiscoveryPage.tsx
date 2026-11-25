@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -75,7 +75,6 @@ interface AIProvider {
 export function NewDiscoveryPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const [selectedProject, setSelectedProject] = useState<string | undefined>()
 
   const { data: projects } = useQuery({
     queryKey: ['projects', 'list'],
@@ -154,6 +153,21 @@ export function NewDiscoveryPage() {
     createMutation.mutate(data)
   }
 
+  const onFormError = (formErrors: FieldErrors<DiscoveryForm>) => {
+    const errorKeys = Object.keys(formErrors)
+    if (errorKeys.length > 0) {
+      const firstKey = errorKeys[0] as keyof DiscoveryForm
+      const errorMsg = formErrors[firstKey]?.message || 'Please check form errors'
+      toast.error(String(errorMsg))
+
+      if (['target_url', 'task'].includes(firstKey)) {
+        setStep(1)
+      } else if (['mode', 'output_language', 'browser_provider', 'timeout'].includes(firstKey)) {
+        setStep(2)
+      }
+    }
+  }
+
   const steps = [
     { number: 1, title: 'Target & Task', description: 'Enter the website and what to discover' },
     { number: 2, title: 'Configuration', description: 'Choose execution mode and output settings' },
@@ -195,8 +209,8 @@ export function NewDiscoveryPage() {
         <Select
           {...register('project_id')}
           id="project_id"
-          placeholder="Select a project or create a new one"
         >
+          <option value="">Create a new project automatically</option>
           {projects?.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} — {p.target_website}
@@ -288,9 +302,8 @@ export function NewDiscoveryPage() {
             <Select
               {...register('ai_provider')}
               id="ai_provider"
-              placeholder="Select AI provider (uses default if empty)"
             >
-              <option value="">Default</option>
+              <option value="">Default AI Provider</option>
               {aiProviders?.map((p) => (
                 <option key={`${p.provider}-${p.model_id}`} value={`${p.provider}:${p.model_id}`}>
                   {p.display_name || `${p.provider} (${p.model_id})`} {p.is_default && '(default)'}
@@ -478,7 +491,7 @@ export function NewDiscoveryPage() {
       {/* Form */}
       <Card>
         <CardContent className="p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
             {currentStepContent}
 
             {/* Navigation */}
@@ -487,7 +500,7 @@ export function NewDiscoveryPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setStep(s => Math.max(1, s - 1))}
-                disabled={step === 1}
+                disabled={step === 1 || createMutation.isPending}
               >
                 <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
                 Back
@@ -500,7 +513,7 @@ export function NewDiscoveryPage() {
                   </Button>
                 )}
                 {step === 3 && (
-                  <Button type="submit" loading={isSubmitting}>
+                  <Button type="submit" loading={createMutation.isPending || isSubmitting}>
                     Start Discovery
                   </Button>
                 )}

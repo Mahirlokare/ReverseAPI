@@ -138,7 +138,7 @@ async def login(
         )
 
     normalized_email = str(username).strip().lower()
-    result = await db.execute(select(User).where(User.email == normalized_email))
+    result = await db.execute(select(User).where(func.lower(User.email) == normalized_email))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(password, user.hashed_password):

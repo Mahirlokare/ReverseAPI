@@ -714,7 +714,12 @@ run().catch(console.error);
         if run_id in self.running_tasks:
             task = self.running_tasks[run_id]
             task.cancel()
-            del self.running_tasks[run_id]
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+            if run_id in self.running_tasks:
+                del self.running_tasks[run_id]
 
         async with get_db_context() as db:
             run = await db.get(DiscoveryRun, UUID(run_id))
