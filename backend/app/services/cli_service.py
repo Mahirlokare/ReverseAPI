@@ -685,10 +685,6 @@ run().catch(console.error);
         # Update Project statistics
         project = await db.get(Project, run.project_id)
         if project:
-            project.run_count = (project.run_count or 0) + 1
-            if capture:
-                project.endpoint_count = (project.endpoint_count or 0) + endpoint_count
-            project.client_count = (project.client_count or 0) + client_count
             project.last_activity_at = datetime.utcnow()
             db.add(project)
 
