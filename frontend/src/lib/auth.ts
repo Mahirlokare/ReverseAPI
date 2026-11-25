@@ -6,6 +6,16 @@ interface AuthTokens {
   refresh_token: string
 }
 
+export interface User {
+  id: string
+  email: string
+  full_name: string | null
+  role: string
+  is_active: boolean
+  is_verified: boolean
+  created_at: string
+}
+
 interface AuthState {
   tokens: AuthTokens | null
   user: User | null
@@ -17,16 +27,6 @@ interface AuthState {
   setLoading: (loading: boolean) => void
 }
 
-export interface User {
-  id: string
-  email: string
-  full_name: string | null
-  role: string
-  is_active: boolean
-  is_verified: boolean
-  created_at: string
-}
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -34,14 +34,38 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: true,
-      setTokens: (tokens) => set({ tokens, isAuthenticated: !!tokens }),
-      setUser: (user) => set({ user }),
-      logout: () => set({ tokens: null, user: null, isAuthenticated: false }),
+      setTokens: (tokens) =>
+        set({
+          tokens,
+          isAuthenticated: !!tokens?.access_token,
+        }),
+      setUser: (user) =>
+        set((state) => ({
+          user,
+          isAuthenticated: state.isAuthenticated || !!user,
+        })),
+      logout: () =>
+        set({
+          tokens: null,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        }),
       setLoading: (isLoading) => set({ isLoading }),
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ tokens: state.tokens }),
+      partialize: (state) => ({
+        tokens: state.tokens,
+        user: state.user,
+        isAuthenticated: !!state.tokens?.access_token,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isAuthenticated = !!state.tokens?.access_token
+          state.isLoading = false
+        }
+      },
     }
   )
 )
@@ -55,5 +79,5 @@ export function setAuthTokens(tokens: AuthTokens | null): void {
 }
 
 export function clearAuthTokens(): void {
-  useAuthStore.getState().setTokens(null)
+  useAuthStore.getState().logout()
 }

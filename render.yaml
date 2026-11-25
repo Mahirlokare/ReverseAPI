@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: reverse-api-engineer-ui
+    runtime: static
+    repo: https://github.com/Mahirlokare/ReverseAPI
+    branch: saad
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

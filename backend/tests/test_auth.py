@@ -42,3 +42,27 @@ async def test_register_and_login(client):
     me_res = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me_res.status_code == 200
     assert me_res.json()["email"] == "newuser@example.com"
+
+
+
+@pytest.mark.asyncio
+async def test_login_accepts_legacy_mixed_case_email(client, db_session):
+    from app.core.security import get_password_hash
+    from app.models import User, UserRole
+
+    user = User(
+        email="Legacy.User@Example.com",
+        hashed_password=get_password_hash("LegacyPassword123!"),
+        full_name="Legacy User",
+        role=UserRole.DEVELOPER,
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "  LEGACY.USER@example.com  ", "password": "LegacyPassword123!"},
+    )
+    assert response.status_code == 200
+    assert response.json()["access_token"]

@@ -28,7 +28,7 @@ import { api } from '../lib/api'
 const navigation = [
   { name: 'Overview', href: '/', icon: LayoutDashboard },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
-  { name: 'API Discovery', href: '/projects/new', icon: Search, badge: 'New' },
+  { name: 'API Discovery', href: '/discover', icon: Search, badge: 'New' },
   { name: 'Runs & History', href: '/runs', icon: History },
   { name: 'API Endpoints', href: '/endpoints', icon: Globe },
   { name: 'Generated Clients', href: '/clients', icon: Code },
@@ -68,7 +68,7 @@ export function Layout() {
         className={cn(
           'fixed lg:static z-50 flex h-full flex-col border-r bg-card transition-all duration-300',
           sidebarCollapsed ? 'w-16' : 'w-64',
-          !sidebarOpen && 'lg:hidden -translate-x-full'
+          !sidebarOpen && '-translate-x-full lg:translate-x-0'
         )}
         aria-label="Main navigation"
       >
@@ -96,8 +96,19 @@ export function Layout() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-1" role="navigation" aria-label="Main">
           {navigation.map((item) => {
-            const isActive = location.pathname === item.href || 
-              (item.href !== '/' && location.pathname.startsWith(item.href))
+            const isDiscovery = location.pathname === '/discover' || location.pathname === '/projects/new'
+            let isActive = false
+
+            if (item.href === '/discover' || item.href === '/projects/new') {
+              isActive = isDiscovery
+            } else if (item.href === '/projects') {
+              isActive = (location.pathname === '/projects' || location.pathname.startsWith('/projects/')) && !isDiscovery
+            } else if (item.href === '/') {
+              isActive = location.pathname === '/'
+            } else {
+              isActive = location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
+            }
+
             return (
               <NavLink
                 key={item.name}
@@ -112,7 +123,10 @@ export function Layout() {
                 )}
                 aria-current={isActive ? 'page' : undefined}
                 title={sidebarCollapsed ? item.name : undefined}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => {
+                  // Navigation should only close the drawer on mobile; desktop navigation stays visible.
+                  if (window.matchMedia('(max-width: 1023px)').matches) setSidebarOpen(false)
+                }}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
                 {!sidebarCollapsed && (

@@ -1,8 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { getAuthTokens, setAuthTokens, clearAuthTokens } from './auth'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -27,23 +29,33 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const requestUrl = originalRequest?.url || ''
+    const isAuthRequest = /\/auth\/(login|register|refresh)(?:\?|$)/.test(requestUrl)
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthRequest) {
       originalRequest._retry = true
 
       try {
         const tokens = getAuthTokens()
         if (tokens?.refresh_token) {
-          const response = await axios.post('/api/v1/auth/refresh', {
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refresh_token: tokens.refresh_token,
-          })
+          }, { withCredentials: true })
           const { access_token, refresh_token } = response.data
           setAuthTokens({ access_token, refresh_token })
           originalRequest.headers.Authorization = `Bearer ${access_token}`
           return api(originalRequest)
+        } else {
+          clearAuthTokens()
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+            window.location.href = '/login'
+          }
         }
       } catch (refreshError) {
         clearAuthTokens()
-        window.location.href = '/login'
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login'
+        }
         return Promise.reject(refreshError)
       }
     }

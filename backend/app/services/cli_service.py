@@ -685,10 +685,6 @@ run().catch(console.error);
         # Update Project statistics
         project = await db.get(Project, run.project_id)
         if project:
-            project.run_count = (project.run_count or 0) + 1
-            if capture:
-                project.endpoint_count = (project.endpoint_count or 0) + endpoint_count
-            project.client_count = (project.client_count or 0) + client_count
             project.last_activity_at = datetime.utcnow()
             db.add(project)
 
@@ -714,7 +710,12 @@ run().catch(console.error);
         if run_id in self.running_tasks:
             task = self.running_tasks[run_id]
             task.cancel()
-            del self.running_tasks[run_id]
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+            if run_id in self.running_tasks:
+                del self.running_tasks[run_id]
 
         async with get_db_context() as db:
             run = await db.get(DiscoveryRun, UUID(run_id))

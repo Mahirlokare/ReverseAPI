@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Button } from '../components/ui/Button'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/Card'
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { formatDate, formatDuration, cn } from '../lib/utils'
@@ -15,7 +15,6 @@ import {
   RotateCcw,
   X,
   ExternalLink,
-  Download,
   Code,
   Database,
   Globe,
@@ -40,7 +39,7 @@ interface Run {
   started_at: string | null
   finished_at: string | null
   duration_seconds: number | null
-  execution_config: Record<string, unknown>
+  execution_config: Record<string, unknown> | null
   project_id: string
   user_id: string
   workspace_id: string
@@ -82,7 +81,17 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; varia
   timed_out: { label: 'Timed Out', icon: <Clock className="h-4 w-4" />, variant: 'destructive' },
 }
 
-const terminalStatuses = ['queued', 'initializing', 'browser_starting', 'navigating', 'interacting', 'capturing_traffic', 'analyzing_requests', 'generating_client', 'validating_output']
+const activeStatuses = [
+  'queued',
+  'initializing',
+  'browser_starting',
+  'navigating',
+  'interacting',
+  'capturing_traffic',
+  'analyzing_requests',
+  'generating_client',
+  'validating_output',
+]
 
 export function RunMonitorPage() {
   const { runId } = useParams<{ runId: string }>()
@@ -91,17 +100,17 @@ export function RunMonitorPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'logs'>('overview')
   const [autoRefresh, setAutoRefresh] = useState(true)
 
-  const { data: run, isLoading, refetch } = useQuery({
+  const { data: run, isLoading, error } = useQuery({
     queryKey: ['runs', runId],
     queryFn: async () => {
       const response = await api.get<Run>(`/runs/${runId}`)
       return response.data
     },
     refetchInterval: (query) => {
-      if (!autoRefresh) return false
-      const data = query.state.data
+      if (!autoRefresh || !query) return false
+      const data = query.state?.data as Run | undefined
       if (!data) return 2000
-      return terminalStatuses.includes(data.status) ? 2000 : false
+      return activeStatuses.includes(data.status) ? 2000 : false
     },
     enabled: !!runId,
   })
@@ -142,12 +151,6 @@ export function RunMonitorPage() {
     onError: () => toast.error('Failed to retry run'),
   })
 
-  useEffect(() => {
-    if (run && !terminalStatuses.includes(run.status)) {
-      // Keep polling
-    }
-  }, [run])
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -156,11 +159,14 @@ export function RunMonitorPage() {
     )
   }
 
-  if (!run) {
+  if (!run || error) {
     return (
       <div className="text-center py-12">
         <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-medium mb-2">Run not found</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          This discovery run could not be found or you do not have permission to view it.
+        </p>
         <Button onClick={() => navigate('/projects')} variant="outline">
           Back to Projects
         </Button>
@@ -168,9 +174,9 @@ export function RunMonitorPage() {
     )
   }
 
-  const config = statusConfig[run.status] || { label: run.status, icon: <Info className="h-4 w-4" />, variant: 'secondary' }
-  const isTerminal = !terminalStatuses.includes(run.status)
-  const isRunning = terminalStatuses.includes(run.status)
+  const currentStatus = run.status || 'queued'
+  const config = statusConfig[currentStatus] || { label: currentStatus, icon: <Info className="h-4 w-4" />, variant: 'secondary' }
+  const isFinished = !activeStatuses.includes(currentStatus)
 
   return (
     <div className="space-y-6">
@@ -186,34 +192,44 @@ export function RunMonitorPage() {
               <span className="text-sm text-muted-foreground font-mono">Engine: {run.engine_run_id}</span>
             )}
           </div>
-          <h1 className="text-2xl font-bold mt-2">{run.task.slice(0, 80)}{run.task.length > 80 ? '...' : ''}</h1>
+          <h1 className="text-2xl font-bold mt-2">
+            {run.task ? (run.task.length > 80 ? run.task.slice(0, 80) + '...' : run.task) : 'API Discovery Run'}
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {run.target_url} • {formatDate(run.created_at)} • {run.mode} mode
+            {run.target_url} • {formatDate(run.created_at)} • {run.mode || 'agent'} mode
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setAutoRefresh(!autoRefresh)}>
             {autoRefresh ? 'Pause' : 'Resume'} Auto-refresh
           </Button>
-          {!isTerminal && (
-            <Button variant="destructive" onClick={() => cancelMutation.mutate()}>
+          {!isFinished && (
+            <Button
+              variant="destructive"
+              onClick={() => cancelMutation.mutate()}
+              loading={cancelMutation.isPending}
+            >
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
           )}
-          {isTerminal && run.status === 'failed' && (
-            <Button variant="outline" onClick={() => retryMutation.mutate()}>
+          {isFinished && run.status === 'failed' && (
+            <Button
+              variant="outline"
+              onClick={() => retryMutation.mutate()}
+              loading={retryMutation.isPending}
+            >
               <RotateCcw className="h-4 w-4 mr-2" />
               Retry
             </Button>
           )}
-          {isTerminal && run.status === 'completed' && (
-            <Button variant="outline" asChild>
-              <a href={`/projects/${run.project_id}`}>
+          {isFinished && run.status === 'completed' && run.project_id && (
+            <Link to={`/projects/${run.project_id}`}>
+              <Button variant="outline">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 View Project
-              </a>
-            </Button>
+              </Button>
+            </Link>
           )}
         </div>
       </div>
@@ -228,9 +244,8 @@ export function RunMonitorPage() {
           <Button
             key={tab.id}
             variant="ghost"
-            className="gap-2"
+            className={cn('gap-2', activeTab === tab.id && 'border-b-2 border-primary rounded-none')}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            aria-selected={activeTab === tab.id}
           >
             <tab.icon className="h-4 w-4" />
             {tab.label}
@@ -260,9 +275,20 @@ export function RunMonitorPage() {
                   { key: 'validating_output', label: 'Validating Output' },
                   { key: 'completed', label: 'Completed' },
                 ].map((stage, index) => {
-                  const stageStatus = run.status === stage.key ? 'current' :
-                    terminalStatuses.indexOf(run.status) > terminalStatuses.indexOf(stage.key) ? 'completed' : 'pending'
+                  const stageOrder = [
+                    'queued', 'initializing', 'browser_starting', 'navigating',
+                    'interacting', 'capturing_traffic', 'analyzing_requests',
+                    'generating_client', 'validating_output', 'completed',
+                  ]
+                  const currentIdx = stageOrder.indexOf(currentStatus)
+                  const thisIdx = stageOrder.indexOf(stage.key)
+                  const stageStatus = currentStatus === stage.key
+                    ? 'current'
+                    : (currentStatus === 'completed' || (currentIdx > thisIdx && currentIdx !== -1))
+                    ? 'completed'
+                    : 'pending'
                   const isLast = index === 9
+
                   return (
                     <div key={stage.key} className="flex items-start gap-4">
                       <div className="relative flex flex-col items-center">
@@ -309,20 +335,20 @@ export function RunMonitorPage() {
             <Card>
               <CardContent className="p-6">
                 <p className="text-sm text-muted-foreground">Mode</p>
-                <p className="font-medium mt-1 capitalize">{run.mode}</p>
+                <p className="font-medium mt-1 capitalize">{run.mode || 'agent'}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6">
                 <p className="text-sm text-muted-foreground">Output Language</p>
-                <p className="font-medium mt-1 capitalize">{run.output_language}</p>
+                <p className="font-medium mt-1 capitalize">{run.output_language || 'typescript'}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6">
                 <p className="text-sm text-muted-foreground">{run.duration_seconds ? 'Duration' : 'Elapsed'}</p>
                 <p className="font-medium mt-1">
-                  {run.duration_seconds ? formatDuration(run.duration_seconds) : 'Running...'}
+                  {formatDuration(run.duration_seconds)}
                 </p>
               </CardContent>
             </Card>
@@ -335,7 +361,7 @@ export function RunMonitorPage() {
             </CardHeader>
             <CardContent>
               <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
-                {JSON.stringify(run.execution_config, null, 2)}
+                {JSON.stringify(run.execution_config || {}, null, 2)}
               </pre>
             </CardContent>
           </Card>
@@ -359,19 +385,21 @@ export function RunMonitorPage() {
               <CardHeader>
                 <CardTitle>Next Steps</CardTitle>
               </CardHeader>
-              <CardContent className="flex gap-4">
-                <Button asChild>
-                  <a href={`/projects/${run.project_id}`}>View Project</a>
-                </Button>
-                <Button variant="outline" asChild>
-                  <a href={`/endpoints?run_id=${run.id}`}>View Endpoints</a>
-                </Button>
-                <Button variant="outline" asChild>
-                  <a href={`/clients?run_id=${run.id}`}>View Generated Clients</a>
-                </Button>
-                <Button variant="outline" asChild>
-                  <a href={`/captures?run_id=${run.id}`}>View Captures</a>
-                </Button>
+              <CardContent className="flex flex-wrap gap-4">
+                {run.project_id && (
+                  <Link to={`/projects/${run.project_id}`}>
+                    <Button>View Project</Button>
+                  </Link>
+                )}
+                <Link to={`/endpoints?run_id=${run.id}`}>
+                  <Button variant="outline">View Endpoints</Button>
+                </Link>
+                <Link to={`/clients?run_id=${run.id}`}>
+                  <Button variant="outline">View Generated Clients</Button>
+                </Link>
+                <Link to={`/captures?run_id=${run.id}`}>
+                  <Button variant="outline">View Captures</Button>
+                </Link>
               </CardContent>
             </Card>
           )}
@@ -381,14 +409,14 @@ export function RunMonitorPage() {
       {activeTab === 'events' && (
         <Card>
           <CardContent className="p-0">
-            {events?.length === 0 ? (
+            {!events || events.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Database className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p>No events yet</p>
+                <p>No events recorded yet</p>
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {events?.map((event) => (
+                {events.map((event) => (
                   <div key={event.id} className="p-4 hover:bg-accent/50 transition-colors">
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -396,7 +424,7 @@ export function RunMonitorPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="font-medium capitalize">{event.event_type.replace(/_/g, ' ')}</p>
+                          <p className="font-medium capitalize">{event.event_type ? event.event_type.replace(/_/g, ' ') : 'Event'}</p>
                           <p className="text-xs text-muted-foreground">{formatDate(event.created_at)}</p>
                         </div>
                         {event.message && (
@@ -423,14 +451,14 @@ export function RunMonitorPage() {
       {activeTab === 'logs' && (
         <Card>
           <CardContent className="p-0">
-            {logs?.length === 0 ? (
+            {!logs || logs.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Code className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p>No logs yet</p>
+                <p>No logs recorded yet</p>
               </div>
             ) : (
               <div className="font-mono text-sm max-h-[500px] overflow-y-auto">
-                {logs?.slice().reverse().map((log) => (
+                {logs.slice().reverse().map((log) => (
                   <div
                     key={log.id}
                     className={cn(
@@ -441,7 +469,7 @@ export function RunMonitorPage() {
                     )}
                   >
                     <span className="text-muted-foreground mr-3">{formatDate(log.created_at)}</span>
-                    <span className="text-xs px-2 py-0.5 rounded bg-muted mr-2">{log.level.toUpperCase()}</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-muted mr-2">{(log.level || 'info').toUpperCase()}</span>
                     <span className="text-muted-foreground mr-2">[{log.source || 'app'}]</span>
                     <span>{log.message}</span>
                   </div>

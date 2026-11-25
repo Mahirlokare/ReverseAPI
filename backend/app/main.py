@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from app.core.database import engine, is_sqlite
 import structlog
 
 from app.core.config import settings
@@ -73,13 +75,44 @@ async def global_exception_handler(request, exc):
 
 
 # Health check endpoint
+@app.get("/")
+async def root():
+    """Small service landing page for deployment and API discovery."""
+    return {
+        "name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "status": "running",
+        "health": "/health",
+        "api": settings.API_PREFIX,
+        "docs": "/docs" if settings.DEBUG else None,
+    }
+
+
 @app.get("/health")
 async def health_check():
+    try:
+        async with engine.connect() as connection:
+            await connection.execute(text("SELECT 1"))
+    except Exception:
+        logger.exception("Database health check failed")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "degraded",
+                "app": settings.APP_NAME,
+                "version": settings.APP_VERSION,
+                "environment": settings.ENVIRONMENT,
+                "database": "unavailable",
+            },
+        )
+
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
+        "database": "connected",
+        "database_persistence": "ephemeral_sqlite" if is_sqlite else "external_postgresql",
     }
 
 

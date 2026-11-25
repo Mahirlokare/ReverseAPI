@@ -1,25 +1,43 @@
 import { useEffect } from 'react'
-import { useAuthStore } from './auth'
+import { useAuthStore, getAuthTokens } from './auth'
 import { api } from './api'
 import type { User } from './auth'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { tokens, setUser, setLoading } = useAuthStore()
+  const { setUser, setLoading, logout } = useAuthStore()
 
   useEffect(() => {
+    let mounted = true
+
     const initAuth = async () => {
-      if (tokens?.access_token) {
+      const storedTokens = getAuthTokens()
+      if (storedTokens?.access_token) {
         try {
           const response = await api.get<User>('/auth/me')
-          setUser(response.data)
-        } catch {
-          // Token invalid, will be handled by interceptor
+          if (mounted) {
+            setUser(response.data)
+            useAuthStore.setState({ isAuthenticated: true, isLoading: false })
+          }
+        } catch (error: unknown) {
+          const axiosError = error as { response?: { status?: number } }
+          if (axiosError?.response?.status === 401) {
+            if (mounted) {
+              logout()
+            }
+          }
         }
       }
-      setLoading(false)
+      if (mounted) {
+        setLoading(false)
+      }
     }
+
     initAuth()
-  }, [tokens, setUser, setLoading])
+
+    return () => {
+      mounted = false
+    }
+  }, [setUser, setLoading, logout])
 
   return <>{children}</>
 }

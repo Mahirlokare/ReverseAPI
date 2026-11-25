@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -46,7 +46,7 @@ const BrowserProvider = {
 const discoverySchema = z.object({
   target_url: z.string().url('Please enter a valid URL (including http:// or https://)'),
   task: z.string().min(10, 'Please describe what you want to discover (at least 10 characters)'),
-  project_id: z.string().uuid().optional(),
+  project_id: z.string().optional().or(z.literal('')),
   mode: z.nativeEnum(ExecutionMode).default(ExecutionMode.AGENT),
   output_language: z.nativeEnum(OutputLanguage).default(OutputLanguage.TYPESCRIPT),
   ai_provider: z.string().optional(),
@@ -75,7 +75,6 @@ interface AIProvider {
 export function NewDiscoveryPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const [selectedProject, setSelectedProject] = useState<string | undefined>()
 
   const { data: projects } = useQuery({
     queryKey: ['projects', 'list'],
@@ -85,11 +84,22 @@ export function NewDiscoveryPage() {
     },
   })
 
-  const { data: aiProviders } = useQuery({
+  const { data: workspaces } = useQuery({
+    queryKey: ['workspaces', 'mine'],
+    queryFn: async () => {
+      const response = await api.get<Array<{ id: string; name: string }>>('/workspaces/me/workspaces')
+      return response.data
+    },
+  })
+
+  const { data: aiProviders = [] } = useQuery({
     queryKey: ['ai-providers'],
     queryFn: async () => {
-      const response = await api.get<AIProvider[]>('/ai-providers')
-      return response.data
+      const response = await api.get<{ items?: AIProvider[] } | AIProvider[]>('/ai-providers')
+      if (Array.isArray(response.data)) {
+        return response.data
+      }
+      return response.data?.items ?? []
     },
   })
 
@@ -98,10 +108,14 @@ export function NewDiscoveryPage() {
     handleSubmit,
     watch,
     setValue,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<DiscoveryForm>({
     resolver: zodResolver(discoverySchema),
     defaultValues: {
+      target_url: '',
+      task: '',
+      project_id: '',
       mode: ExecutionMode.AGENT,
       output_language: OutputLanguage.TYPESCRIPT,
       browser_provider: BrowserProvider.PLAYWRIGHT,
@@ -114,19 +128,47 @@ export function NewDiscoveryPage() {
   const watchedOutputLanguage = watch('output_language')
 
   const createMutation = useMutation({
-    mutationFn: (data: DiscoveryForm) => api.post('/runs', data),
+    mutationFn: (data: DiscoveryForm) => {
+      const [provider, selectedModel] = (data.ai_provider || '').split(':', 2)
+      const payload: Record<string, unknown> = {
+        ...data,
+        ai_provider: provider || undefined,
+        model: data.model || selectedModel || undefined,
+      }
+      if (!payload.project_id || (payload.project_id as string).trim() === '') {
+        delete payload.project_id
+      }
+      return api.post('/runs', payload)
+    },
     onSuccess: (response) => {
       toast.success('Discovery started!')
       navigate(`/runs/${response.data.id}`)
     },
     onError: (error: unknown) => {
-      const axiosError = error as { response?: { data?: { detail?: string } } }
-      toast.error(axiosError.response?.data?.detail || 'Failed to start discovery')
+      const axiosError = error as { message?: string; response?: { data?: { detail?: string | Array<{ msg?: string }> } } }
+      const detail = axiosError.response?.data?.detail
+      const message = Array.isArray(detail) ? detail.map(item => item.msg).filter(Boolean).join('; ') : detail
+      toast.error(message || axiosError.message || 'Failed to start discovery')
     },
   })
 
   const onSubmit = (data: DiscoveryForm) => {
     createMutation.mutate(data)
+  }
+
+  const onFormError = (formErrors: FieldErrors<DiscoveryForm>) => {
+    const errorKeys = Object.keys(formErrors)
+    if (errorKeys.length > 0) {
+      const firstKey = errorKeys[0] as keyof DiscoveryForm
+      const errorMsg = formErrors[firstKey]?.message || 'Please check form errors'
+      toast.error(String(errorMsg))
+
+      if (['target_url', 'task'].includes(firstKey)) {
+        setStep(1)
+      } else if (['mode', 'output_language', 'browser_provider', 'timeout'].includes(firstKey)) {
+        setStep(2)
+      }
+    }
   }
 
   const steps = [
@@ -170,8 +212,8 @@ export function NewDiscoveryPage() {
         <Select
           {...register('project_id')}
           id="project_id"
-          placeholder="Select a project or create a new one"
         >
+          <option value="">Create a new project automatically</option>
           {projects?.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} — {p.target_website}
@@ -263,10 +305,9 @@ export function NewDiscoveryPage() {
             <Select
               {...register('ai_provider')}
               id="ai_provider"
-              placeholder="Select AI provider (uses default if empty)"
             >
-              <option value="">Default</option>
-              {aiProviders?.map((p) => (
+              <option value="">Default AI Provider</option>
+              {(Array.isArray(aiProviders) ? aiProviders : []).map((p) => (
                 <option key={`${p.provider}-${p.model_id}`} value={`${p.provider}:${p.model_id}`}>
                   {p.display_name || `${p.provider} (${p.model_id})`} {p.is_default && '(default)'}
                 </option>
@@ -324,6 +365,7 @@ export function NewDiscoveryPage() {
 
   const renderStep3 = () => {
     const formData = watch()
+    const taskPreview = formData.task ? (formData.task.length > 80 ? formData.task.slice(0, 80) + '...' : formData.task) : 'None'
     return (
       <div className="space-y-6">
         <div className="p-4 bg-muted/50 rounded-lg">
@@ -331,23 +373,23 @@ export function NewDiscoveryPage() {
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Target URL</dt>
-              <dd className="font-medium truncate max-w-md">{formData.target_url}</dd>
+              <dd className="font-medium truncate max-w-md">{formData.target_url || 'None'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Task</dt>
-              <dd className="font-medium truncate max-w-md">{formData.task.slice(0, 80)}...</dd>
+              <dd className="font-medium truncate max-w-md">{taskPreview}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Execution Mode</dt>
-              <dd className="font-medium capitalize">{formData.mode}</dd>
+              <dd className="font-medium capitalize">{formData.mode || 'agent'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Output Language</dt>
-              <dd className="font-medium capitalize">{formData.output_language}</dd>
+              <dd className="font-medium capitalize">{formData.output_language || 'typescript'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Browser Provider</dt>
-              <dd className="font-medium">{formData.browser_provider}</dd>
+              <dd className="font-medium">{formData.browser_provider || 'playwright'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Headless Mode</dt>
@@ -355,7 +397,7 @@ export function NewDiscoveryPage() {
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Timeout</dt>
-              <dd className="font-medium">{formData.timeout}s</dd>
+              <dd className="font-medium">{formData.timeout || 3600}s</dd>
             </div>
             {formData.ai_provider && (
               <div className="flex justify-between">
@@ -380,6 +422,14 @@ export function NewDiscoveryPage() {
         </div>
       </div>
     )
+  }
+
+  const handleNextStep = async () => {
+    if (step === 1) {
+      const valid = await trigger(['target_url', 'task'])
+      if (!valid) return
+    }
+    setStep(s => Math.min(3, s + 1))
   }
 
   const currentStepContent = step === 1 ? renderStep1() : step === 2 ? renderStep2() : renderStep3()
@@ -444,7 +494,7 @@ export function NewDiscoveryPage() {
       {/* Form */}
       <Card>
         <CardContent className="p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-6">
             {currentStepContent}
 
             {/* Navigation */}
@@ -453,20 +503,20 @@ export function NewDiscoveryPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setStep(s => Math.max(1, s - 1))}
-                disabled={step === 1}
+                disabled={step === 1 || createMutation.isPending}
               >
                 <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
                 Back
               </Button>
               <div className="flex gap-2">
                 {step < 3 && (
-                  <Button type="button" onClick={() => setStep(s => Math.min(3, s + 1))}>
+                  <Button type="button" onClick={handleNextStep}>
                     Next
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 )}
                 {step === 3 && (
-                  <Button type="submit" loading={isSubmitting}>
+                  <Button type="submit" loading={createMutation.isPending || isSubmitting}>
                     Start Discovery
                   </Button>
                 )}

@@ -5,8 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDate(date: string | Date, _format: string = 'PPp'): string {
+export function formatDate(date?: string | Date | null, _format: string = 'PPp'): string {
+  if (!date) return '—'
   const d = new Date(date)
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -16,9 +18,10 @@ export function formatDate(date: string | Date, _format: string = 'PPp'): string
   })
 }
 
-export function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+export function formatDuration(seconds?: number | null): string {
+  if (seconds === undefined || seconds === null || isNaN(seconds) || seconds <= 0) return '0s'
+  if (seconds < 60) return `${Math.floor(seconds)}s`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.floor(seconds % 60)}s`
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
   return `${hours}h ${minutes}m`
